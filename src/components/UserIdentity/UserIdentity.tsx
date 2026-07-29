@@ -147,6 +147,13 @@ const UserIdentity = ({
       overlay={hoverCard}
       trigger={['hover', 'focus']}
     >
+      {/*
+        tabIndex is required here (not just decorative) so keyboard users can
+        reach this element via Tab: OverlayTrigger's `trigger={['hover', 'focus']}`
+        reveals the hover card on focus, so without tabIndex keyboard users
+        would have no way to see it at all.
+      */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
       <div className="user-identity__hover-trigger" tabIndex={0}>
         {identity}
       </div>
