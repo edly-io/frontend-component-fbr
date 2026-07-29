@@ -17,6 +17,7 @@
     "access": "public"
   },
   "scripts": {
+    "prepare": "npm run build",
     "build": "rm -rf dist && fedx-scripts babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps --ignore \"src/**/*.test.ts\",\"src/**/*.test.tsx\",\"**/__mocks__\",\"**/__snapshots__\" --copy-files --no-copy-ignored && npm run build:types",
     "build:types": "tsc --emitDeclarationOnly --project tsconfig.build.json",
     "lint": "fedx-scripts eslint --ext .js --ext .jsx --ext .ts --ext .tsx .",
