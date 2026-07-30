@@ -1,0 +1,11 @@
+// On-screen: the fixed 1123×710 certificate document scaled to its container
+// via the --fit-scale variable set by CertificateHtmlView. The `.fbr-cert`
+// document itself is styled by the backend template's inlined <style>.
+// Printing is handled by printCertificate (isolated iframe with its own @page).
+.fbr-cert-scale {
+  width: 100%;
+  aspect-ratio: 1123 / 710;
+  overflow: hidden;
+  border: 1px solid var(--pgn-color-light-400);
+  border-radius: .5rem;
+}
