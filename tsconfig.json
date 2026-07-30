@@ -1,0 +1,17 @@
+{
+  "extends": "@edx/typescript-config",
+  "compilerOptions": {
+    "outDir": "dist",
+    "baseUrl": "./src",
+    "paths": {
+      "@src/*": ["./*"]
+    },
+    "types": ["jest", "@testing-library/jest-dom"]
+  },
+  "include": [
+    "*.js",
+    ".eslintrc.js",
+    "src/**/*"
+  ],
+  "exclude": ["dist", "node_modules", "coverage"]
+}
