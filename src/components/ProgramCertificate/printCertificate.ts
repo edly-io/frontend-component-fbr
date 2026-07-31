@@ -56,10 +56,22 @@ const printCertificate = (certificateHtml: string, title: string): void => {
       iframe.remove();
       return;
     }
+    // Chrome derives the Save-as-PDF filename from the *focused* frame's title.
+    // A page host (Sessions) can focus the print iframe, so its <title> wins.
+    // Inside a modal (Studio's certificate modal) the host's focus-trap yanks
+    // focus straight back, leaving the top document focused — so Chrome would
+    // use the browser tab title instead. Setting the top-level document.title to
+    // the same filename makes the output correct regardless of which frame keeps
+    // focus; we restore the original title once printing finishes or is cancelled.
+    const hostTitle = document.title;
     // afterprint fires on both print and cancel in modern browsers.
-    frameWindow.addEventListener('afterprint', () => iframe.remove(), { once: true });
+    frameWindow.addEventListener('afterprint', () => {
+      document.title = hostTitle;
+      iframe.remove();
+    }, { once: true });
     const runPrint = () => {
       frameWindow.focus(); // Safari prints the focused frame.
+      document.title = title;
       frameWindow.print();
     };
     // Wait for images AND fonts before printing. The logos, watermark and
