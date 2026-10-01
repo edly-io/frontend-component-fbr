@@ -163,6 +163,7 @@
   font-weight: 500;
   line-height: 1.2;
   word-break: break-word;
+  white-space: nowrap;
 }
 
 .user-identity__role-label {
@@ -171,6 +172,7 @@
   letter-spacing: .06em;
   margin-top: 2px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .user-identity--compact .user-identity__name {
