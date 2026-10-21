@@ -29,6 +29,7 @@ const NO_SESSION_TYPES: SessionTypeOption[] = [];
 /** Global role from `/config/` (learner until it loads); per-session roles come on each session. */
 const useViewerRole = () => {
   const { data: config } = useConfig();
+  const isRoleKnown = Boolean(config);
   const userRole = config?.user_role ?? USER_ROLE.LEARNER;
   const role: CalendarViewerRole = useMemo(() => ({
     canManageSessions: userRole === USER_ROLE.ADMIN,
@@ -36,12 +37,12 @@ const useViewerRole = () => {
     isLearner: userRole === USER_ROLE.LEARNER,
   }), [userRole]);
   const sessionTypes = (config?.session_types as SessionTypeOption[] | undefined) || NO_SESSION_TYPES;
-  return { role, sessionTypes };
+  return { role, sessionTypes, isRoleKnown };
 };
 
 /** Everything the calendar page reads for one program and one visible [start, end) window. */
 const useProgramCalendarData = (programKey: string, start: Date, end: Date) => {
-  const { role, sessionTypes } = useViewerRole();
+  const { role, sessionTypes, isRoleKnown } = useViewerRole();
 
   // Stringify the window in local time. toISOString() would convert to UTC
   // first and shift the whole window back a day in +offset timezones (PKT).
@@ -49,14 +50,15 @@ const useProgramCalendarData = (programKey: string, start: Date, end: Date) => {
   const holidaysQuery = useHolidays(HOLIDAYS_PARAMS);
   const programDatesQuery = useProgramDates(programKey);
   const programQuery = useProgram(programKey);
-  // Leave overlays are for learners and instructors only.
-  const leavesQuery = useApprovedLeaves(
-    { program_key: programKey },
-    (role.isLearner || role.isInstructor) && Boolean(programKey),
-  );
+  // Leave overlays are for learners and instructors only. Wait for the real role:
+  // admins get every trainee's leave from this endpoint, so a fetch made while the
+  // role still defaults to learner would grey out the admin's own sessions. The
+  // data is gated too, because a disabled query still returns its cached data.
+  const showLeaves = isRoleKnown && (role.isLearner || role.isInstructor) && Boolean(programKey);
+  const leavesQuery = useApprovedLeaves({ program_key: programKey }, showLeaves);
 
   const sessions = (sessionsQuery.data?.sessions as CalendarSession[] | undefined) || NO_SESSIONS;
-  const approvedLeaves = (leavesQuery.data as ApprovedLeave[] | undefined) || NO_LEAVES;
+  const approvedLeaves = showLeaves ? (leavesQuery.data as ApprovedLeave[] | undefined) || NO_LEAVES : NO_LEAVES;
 
   const studentRequestMap = useMemo(
     () => buildStudentRequestMap(approvedLeaves, sessions),

@@ -1,3 +1,5 @@
+@use "@openedx/paragon/styles/css/core/custom-media-breakpoints" as paragonCustomMediaBreakpoints;
+
 // ─── Date/time picker (shared DatepickerControl / react-datepicker) ──────────
 // The popup keeps react-datepicker's default look in light mode (matching the
 // authoring and admin MFEs); only the input's icon, sizing and the dark theme

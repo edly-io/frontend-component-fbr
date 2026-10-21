@@ -218,3 +218,33 @@ it.each(['/programs/K', '/programs/K/'])('builds the same roster link from baseP
     '/programs/K/calendar?view=audit-log&record_id=5',
   );
 });
+
+// ─── Admins never see trainees' leaves as their own ─────────────────────────
+
+it('does not grey out an admin\'s sessions when leaves load before /config/ resolves', async () => {
+  // Studio: config is not cached yet, so the role reads as learner on first render
+  // and the leaves query fires. Admins get every trainee's leave from that endpoint.
+  state.calendarSessions = [FUTURE_SESSION];
+  let resolveConfig: (value: unknown) => void = () => {};
+  const configResponse = new Promise((resolve) => { resolveConfig = resolve; });
+  http.get.mockImplementation((url: string) => {
+    if (url.includes('/config/')) { return configResponse; }
+    if (url.includes('/requests/leave/')) {
+      return Promise.resolve({
+        data: [{
+          state: 'APPROVED', leave_type: 'full_day', leave_start_date: '2026-10-20', leave_end_date: '2026-10-20',
+        }],
+      });
+    }
+    return routeGet(url);
+  });
+
+  const { container } = renderCalendar('');
+  await waitFor(() => expect(calendarGetCount()).toBeGreaterThan(0));
+  resolveConfig({ data: { user_role: 'admin', session_types: [] } });
+
+  expect(await screen.findByRole('button', { name: /Python Workshop/ })).toBeInTheDocument();
+  expect(container.querySelector('.calendar-chip--onleave')).toBeNull();
+  // The overlay waits for the real role, so an admin never requests leaves at all.
+  expect(http.get.mock.calls.some(([url]) => url.includes('/requests/leave/'))).toBe(false);
+});
