@@ -1,0 +1,69 @@
+.fbr-searchable-select {
+  position: relative;
+}
+
+.fbr-searchable-select__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem;
+  padding: .3125rem .5rem .3125rem 2.5rem;
+  cursor: text;
+
+  &--disabled {
+    background-color: #E9ECEF;
+    cursor: not-allowed;
+  }
+
+  &--invalid {
+    border: 1px solid #DC3545;
+    border-radius: .375rem;
+  }
+}
+
+.fbr-searchable-select__chip-input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  border: none;
+  outline: none;
+  padding: .25rem 0;
+  font-size: inherit;
+  line-height: inherit;
+  background-color: transparent;
+}
+
+.fbr-searchable-select__listbox {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  border: 1px solid #CED4DA;
+  border-radius: .375rem;
+  background-color: #FFFFFF;
+  box-shadow: 0 4px 12px rgb(0 0 0 / .1);
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.fbr-searchable-select__empty {
+  font-size: .875rem;
+}
+
+.fbr-searchable-select__option {
+  padding: .5rem .75rem;
+  cursor: pointer;
+  font-size: .875rem;
+  color: #212529;
+
+  &--focused {
+    background-color: #F0F4FF;
+  }
+
+  &--selected {
+    color: #0D6EFD;
+    font-weight: 600;
+  }
+}
