@@ -1,8 +1,9 @@
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 import { getAttendanceApiUrl } from '../urls';
-import { ApiRecord } from '../types';
+import { ApiRecord, PaginatedList } from '../types';
 import {
-  CalendarSessions, ProgramDateEvent, Session, SessionApprovedLeavesParams, SessionListParams,
+  CalendarSessions, ProgramDateEvent, Session, SessionApprovedLeave, SessionApprovedLeavesParams,
+  SessionListParams,
 } from './types';
 
 const listFrom = <T>(data: T[] | { results?: T[] }): T[] => (
@@ -122,7 +123,7 @@ export const getSessions = async (
 /** Sessions with their approved-leave attendees, server-side paginated. */
 export const getSessionApprovedLeaves = async ({
   program_key, q, page, page_size, date_from, date_to,
-}: SessionApprovedLeavesParams = {}): Promise<ApiRecord> => {
+}: SessionApprovedLeavesParams = {}): Promise<PaginatedList<SessionApprovedLeave>> => {
   const params = new URLSearchParams();
   if (program_key) { params.set('program_key', program_key); }
   if (q) { params.set('q', q); }

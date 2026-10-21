@@ -46,3 +46,21 @@ export interface UpdateSessionVariables {
   sessionId: number;
   sessionData: ApiRecord;
 }
+
+export interface StudentOnLeave {
+  user_id: number;
+  username?: string;
+  email?: string;
+  leave_start_date?: string;
+  leave_end_date?: string;
+  leave_request_id?: string;
+}
+
+/** One row of the sessions/approved-leaves list. */
+export interface SessionApprovedLeave extends ApiRecord {
+  id?: number | string;
+  title?: string;
+  scheduled_start_time?: string;
+  status?: string;
+  students_on_leave?: StudentOnLeave[];
+}

@@ -1,5 +1,5 @@
 import {
-  QueryClient, useMutation, useQuery, useQueryClient,
+  keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 import { fbrKeys, STALE_TIME_MS } from '../queryDefaults';
 import { ApiRecord } from '../types';
@@ -53,6 +53,8 @@ export const useSessionApprovedLeaves = (params: SessionApprovedLeavesParams, en
   queryKey: fbrKeys.sessionApprovedLeaves(params),
   queryFn: () => getSessionApprovedLeaves(params),
   staleTime: STALE_TIME_MS,
+  // Keep the current page on screen while the next page or search loads.
+  placeholderData: keepPreviousData,
   enabled,
 });
 
