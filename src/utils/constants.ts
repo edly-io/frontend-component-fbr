@@ -8,6 +8,8 @@ export const ATTENDANCE_STATUS: Record<string, string> = {
 // Values of Session.status (distinct from AttendanceRecord.status). Only the
 // ones read in a condition are named; the rest are display-only.
 export const SESSION_STATUS = {
+  SCHEDULED: 'scheduled',
+  COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;
 

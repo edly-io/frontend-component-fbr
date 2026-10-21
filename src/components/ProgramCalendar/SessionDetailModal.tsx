@@ -17,14 +17,13 @@ import { getSessionTypeLabel, getStatusVariant } from '../../utils/format';
 import {
   SESSION_STATUS, SESSION_STATUS_LABELS, SESSION_PLATFORM_LABELS, USER_ROLE,
 } from '../../utils/constants';
-import { getSessionStartLink } from '../../data/sessions/api';
 import { buildAuditPath, buildRosterPath } from './links';
+import openSessionStartLink from './openSessionStartLink';
 import { useProgramCalendar } from './ProgramCalendarContext';
 import { CalendarSession, SessionDetailModalProps, SessionRecurrence } from './types';
 import './SessionDetailModal.scss';
 
 const RECURRENCE_TYPE_LABEL: Record<number, string> = { 1: 'Daily', 2: 'Weekly', 3: 'Monthly' };
-const START_LINK_ERROR = 'Could not open the meeting start link. Please try again.';
 
 const formatRecurrence = (recurrence?: SessionRecurrence | null): string => {
   if (!recurrence) { return ''; }
@@ -49,23 +48,6 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 );
 
 const openInNewTab = (url?: string | null) => window.open(url ?? undefined, '_blank', 'noopener,noreferrer');
-
-// Fetch a fresh Zoom host start link and open it. Minted on demand (it expires
-// ~2h after Zoom generates it), so open a blank tab inside the click gesture to
-// dodge popup blockers, then navigate it once the link arrives. Never cached.
-const openSessionStartLink = async (sessionId: number) => {
-  const win = window.open('about:blank', '_blank');
-  if (win) { win.opener = null; }
-  try {
-    const url = await getSessionStartLink(sessionId);
-    if (!url) { throw new Error('No start link returned'); }
-    if (win) { win.location.href = url; } else { window.open(url, '_blank', 'noopener,noreferrer'); }
-  } catch (err) {
-    if (win) { win.close(); }
-    // eslint-disable-next-line no-alert
-    window.alert(START_LINK_ERROR);
-  }
-};
 
 const isSessionPast = (session: CalendarSession): boolean => (
   new Date((session.scheduled_end_time || session.scheduled_start_time) as string) <= new Date()

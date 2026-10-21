@@ -25,6 +25,8 @@ export const useCalendarSessions = (
   queryKey: fbrKeys.calendarSessionsWindow(programKey, startDate, endDate),
   queryFn: () => getCalendarSessions(startDate, endDate, programKey),
   staleTime: STALE_TIME_MS,
+  // Keep the previous window on screen (dimmed) while the next one loads.
+  placeholderData: keepPreviousData,
   enabled: enabled && Boolean(programKey && startDate && endDate),
 });
 

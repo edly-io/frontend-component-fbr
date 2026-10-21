@@ -1,5 +1,5 @@
 import { ApiRecord } from '../../data/types';
-import { Session } from '../../data/sessions/types';
+import { ProgramDateEvent, Session } from '../../data/sessions/types';
 import { StatusRequest } from '../RequestStatusBadge';
 
 export interface ProgramCalendarContextValue {
@@ -55,7 +55,74 @@ export interface CalendarSession extends ApiRecord {
   my_join_url?: string | null;
   meeting_password?: string | null;
   user_role?: string;
-  my_request?: StatusRequest | null;
+  marking_window_open?: boolean;
+  my_request?: CalendarRequest | null;
+}
+
+/** The viewer's own request on a session (leave or remote attendance). */
+export interface CalendarRequest extends StatusRequest {
+  /** Remote-session approvals carry a per-session join link. */
+  data?: { meetings?: Record<string, { meeting_join_url?: string } | undefined> } | null;
+}
+
+/** An approved leave from the requests API, as the calendar's leave overlay reads it. */
+export interface ApprovedLeave extends CalendarRequest {
+  sessions?: Array<{ id: number | string }> | null;
+  leave_start_date?: string | null;
+  leave_end_date?: string | null;
+  leave_type?: string | null;
+}
+
+export type CalendarViewMode = 'month' | 'week' | 'day';
+
+/** What the viewer may do, from `/config/`'s global role. */
+export interface CalendarViewerRole {
+  canManageSessions: boolean;
+  isInstructor: boolean;
+  isLearner: boolean;
+}
+
+export type SessionHandler = (session: CalendarSession) => void;
+
+export interface SessionActionHandlers {
+  onEdit: SessionHandler;
+  onDelete: SessionHandler;
+  onCancel: SessionHandler;
+  onSessionDetail: SessionHandler;
+}
+
+/** Session id → the viewer's approved leave covering it. */
+export type StudentRequestMap = Map<number | string, CalendarRequest>;
+/** Local date (YYYY-MM-DD) → the full-day leave covering it. */
+export type LeaveDateMap = Map<string, ApprovedLeave>;
+
+export interface CalendarViewProps {
+  sessions: CalendarSession[];
+  view: CalendarViewMode;
+  currentDate: Date;
+  onViewChange: (view: CalendarViewMode) => void;
+  /** -1 = previous period, 1 = next. */
+  onNavigate: (direction: number) => void;
+  onGoToToday: () => void;
+  onScheduleNew: () => void;
+  handlers: SessionActionHandlers;
+  role: CalendarViewerRole;
+  /** Dims the grid while a re-fetch is in flight. */
+  loading?: boolean;
+  studentRequestMap?: StudentRequestMap | null;
+  leaveDateMap?: LeaveDateMap | null;
+  holidays?: CalendarHoliday[];
+  programDates?: ProgramDateEvent[];
+  /** `session_type` value → chip colour class. */
+  sessionTypeColors?: Record<string, string>;
+  sessionTypeLabels?: Record<string, string>;
+  programName?: string;
+}
+
+export interface ProgramCalendarProps {
+  programKey: string;
+  /** The host app's router path to this program: fbr-home `/K`, Studio `/programs/K`. */
+  basePath: string;
 }
 
 /** A saved session: editing needs its id. */
