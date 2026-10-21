@@ -1,6 +1,6 @@
 const { createConfig } = require('@openedx/frontend-build');
 
-module.exports = createConfig('jest', {
+const config = createConfig('jest', {
   setupFilesAfterEnv: [
     'jest-expect-message',
     '<rootDir>/src/setupTest.js',
@@ -16,3 +16,9 @@ module.exports = createConfig('jest', {
     '<rootDir>/dist/',
   ],
 });
+
+// Assigned outright, not passed above: webpack-merge concatenates arrays, so the
+// default pattern would still exclude the ESM-only @edx/@openedx packages.
+config.transformIgnorePatterns = ['/node_modules/(?!(@openedx|@edx))'];
+
+module.exports = config;

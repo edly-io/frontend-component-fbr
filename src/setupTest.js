@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom';
+import { mergeConfig } from '@edx/frontend-platform';
+
+mergeConfig({
+  LMS_BASE_URL: 'http://lms.test',
+  STUDIO_BASE_URL: 'http://studio.test',
+});
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
