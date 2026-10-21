@@ -26,8 +26,24 @@ This package compiles TypeScript/TSX source under `src/` into a CommonJS `dist/`
 build with accompanying `.d.ts` declaration files. It is consumed as an npm
 dependency by Open edX MFEs and is **not** a standalone application — it has no
 dev server, no routes, and no bundling of its own. Consumers bring their own
-React, `react-dom`, and `@openedx/paragon` (declared as `peerDependencies` so
+React, `react-dom`, `@openedx/paragon` and the other libraries listed under
+[Peer dependencies](#peer-dependencies) (declared as `peerDependencies` so
 only one copy of each ends up in the final app bundle).
+
+### What the library provides
+
+| Area | Exports |
+| --- | --- |
+| Program calendar | `ProgramCalendar` (props `programKey`, `basePath`), `ProgramCalendarProvider`, `useProgramCalendar`, `buildRosterPath`, `buildAuditPath`, `CalendarPdfDownloadButton` |
+| Shared components | `AuditLogTable`, `DatepickerControl`, `SearchableSelect`, `MobileRowCardsList` / `MobileRowCard` / `MobileRowField`, `SectionHeading`, `RequestStatusBadge`, `ScopeBadge`, `InstructingBadge`, `RequestDetailCell`, `RequestSummary`, `SessionLeavesPanel`, `UserIdentity`, `DebouncedSearch`, certificate components |
+| Data | FBR API functions (sessions, programs, holidays, locations, requests, audit logs, `/config/`) and TanStack Query hooks for them (`useCalendarSessions`, `useConfig`, `useCreateSession`, ...), plus `fbrKeys` query keys |
+| Utils | Date and format helpers, FBR constants (`USER_ROLE`, `REQUEST_STATUS`, ...), `useModalParams`, `useIsBelowLg` |
+
+Components that fetch data need a TanStack `QueryClientProvider`, a
+react-router v6 router and an `IntlProvider` (the MFE's `AppProvider`) above
+them. Every library query sets its own `staleTime`, so the host's QueryClient
+defaults don't make library data stale. All library query keys start with
+`'fbr'`.
 
 ## Prerequisites
 
@@ -49,12 +65,19 @@ only one copy of each ends up in the final app bundle).
 npm install @edly-io/frontend-component-fbr
 ```
 
-Peer dependencies must already be present in the consuming project (they
-almost always are, in any Open edX MFE):
+### Peer dependencies
+
+Peer dependencies must already be present in the consuming project:
 
 ```bash
-npm install @openedx/paragon@^23.5.0 react@^18.3.1 react-dom@^18.3.1
+npm install @openedx/paragon@^23.5.0 react@^18.3.1 react-dom@^18.3.1 \
+  @edx/frontend-platform@^8.4.0 react-router-dom@^6.30.1 @tanstack/react-query@^5.90.5 \
+  react-datepicker@^4.25.0 date-fns@^2.30.0 @react-pdf/renderer@^4.9.0 classnames@^2.3.2
 ```
+
+`react-datepicker` must be a 4.x release. Its CSS
+(`react-datepicker/dist/react-datepicker.css`) is imported by the host app.
+`@react-pdf/renderer` is only loaded when a user downloads the calendar PDF.
 
 ### From GitHub (no npm publish required)
 
