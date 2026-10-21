@@ -1,0 +1,158 @@
+// Values carried over from fbr-home ScheduleMeetingModal's inline styles, plus
+// the recurrence "Ends" rules from fbr-home calendar.scss.
+
+.fbr-schedule-meeting__hint,
+.fbr-schedule-meeting__warning {
+  font-size: 13px;
+}
+
+.fbr-schedule-meeting__type-select--locked {
+  pointer-events: none;
+  opacity: .65;
+}
+
+.fbr-schedule-meeting__field-hint {
+  margin-top: -8px;
+  margin-bottom: 12px;
+}
+
+.fbr-schedule-meeting__field-hint--after-error {
+  margin-top: 0;
+}
+
+.fbr-schedule-meeting__leave-error {
+  font-size: 12px;
+  color: #DC2626;
+  margin-top: -8px;
+  margin-bottom: 12px;
+}
+
+// ─── Recurrence panel ────────────────────────────────────────────────────────
+
+.fbr-schedule-meeting__recurrence-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.fbr-schedule-meeting__recurrence-panel {
+  background-color: #F8F9FA;
+  border: 1px solid #DEE2E6;
+}
+
+.fbr-schedule-meeting__repeat-row {
+  gap: .6rem;
+}
+
+.fbr-schedule-meeting__repeat-label {
+  color: #3D3D3D;
+  white-space: nowrap;
+}
+
+.fbr-schedule-meeting__select-auto {
+  width: auto;
+}
+
+.fbr-schedule-meeting__weekdays {
+  gap: .35rem;
+}
+
+.fbr-schedule-meeting__weekday {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid #CED4DA;
+  background: transparent;
+  color: #3D3D3D;
+  font-weight: 400;
+  font-size: .78rem;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.fbr-schedule-meeting__weekday--selected {
+  border-color: #0D6EFD;
+  background: #0D6EFD;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.fbr-schedule-meeting__ends {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.fbr-schedule-meeting__end-option {
+  gap: .5rem;
+}
+
+.fbr-schedule-meeting__end-label {
+  min-width: 42px;
+}
+
+.fbr-schedule-meeting__end-max {
+  color: #6C757D;
+}
+
+.fbr-schedule-meeting__count-row {
+  gap: .4rem;
+}
+
+.fbr-schedule-meeting__count-input {
+  width: 56px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.fbr-schedule-meeting__count-label {
+  color: #3D3D3D;
+}
+
+.fbr-schedule-meeting__summary {
+  background-color: #E8F4FD;
+  border: 1px solid #B8DAFF;
+  gap: .5rem;
+  margin-top: .25rem;
+}
+
+.fbr-schedule-meeting__summary-icon {
+  font-size: 1rem;
+}
+
+.fbr-schedule-meeting__summary-text {
+  color: #0C5460;
+}
+
+// Recurrence "Ends on" date: a compact field sized for DD/MM/YYYY and its icon.
+.fbr-schedule-meeting__recurrence-end-date {
+  flex: 0 0 auto;
+  width: 9.5rem;
+}
+
+// Shared by both "Ends" rows (on a date / after N occurrences). Below `sm`
+// the control and its "(max N)" hint don't both fit beside the radio/label
+// on one line, so the hint drops under the control; at `sm`+ there's room,
+// so they sit side by side.
+.fbr-schedule-meeting__recurrence-end-row {
+  gap: .75rem;
+  align-items: flex-start;
+
+  @media (--pgn-size-breakpoint-min-width-sm) {
+    align-items: center;
+  }
+}
+
+.fbr-schedule-meeting__recurrence-end-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .25rem;
+
+  @media (--pgn-size-breakpoint-min-width-sm) {
+    flex-direction: row;
+    align-items: center;
+    gap: .4rem;
+  }
+}

@@ -1,0 +1,45 @@
+// Values carried over from fbr-home SessionDetailModal's inline styles.
+
+.fbr-session-detail__field {
+  gap: 12px;
+}
+
+.fbr-session-detail__field-label {
+  min-width: 110px;
+  font-size: 13px;
+}
+
+.fbr-session-detail__field-value {
+  font-size: 13px;
+}
+
+.fbr-session-detail__biometric {
+  font-size: 12px;
+}
+
+.fbr-session-detail__badges {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fbr-session-detail__section {
+  border-top: 1px solid #DEE2E6;
+}
+
+.fbr-session-detail__section-label {
+  font-size: 13px;
+}
+
+.fbr-session-detail__description {
+  white-space: pre-wrap;
+  font-size: 13px;
+  margin-bottom: 0;
+}
+
+.fbr-session-detail__meeting-actions {
+  gap: 8px;
+}
+
+.fbr-session-detail__password {
+  font-size: 13px;
+}
