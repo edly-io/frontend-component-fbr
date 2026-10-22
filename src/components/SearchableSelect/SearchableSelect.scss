@@ -1,0 +1,94 @@
+// Rules are scoped under the root class: the chip container also carries
+// Paragon/Bootstrap's `.form-control`, and Paragon's theme CSS loads after the
+// app's styles, so a single-class rule here would lose (e.g. the left padding
+// that keeps chips and text clear of the search icon).
+.fbr-searchable-select {
+  position: relative;
+
+  // Padding and height come from Paragon's `.form-control` and its
+  // `.has-prepended-node` rule (set on the group in the component), exactly as
+  // for the single-select input, so both modes line up.
+  .fbr-searchable-select__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem .25rem;
+    cursor: text;
+  }
+
+  // A Paragon chip is one text line plus its own padding, 1px border and margin,
+  // so it would make the field taller than an empty one (and than other inputs).
+  // Pull it back to exactly one line; the larger row gap above keeps wrapped rows apart.
+  .fbr-searchable-select__chips .pgn__chip {
+    margin-block: calc(-1 * (var(--pgn-spacing-chip-padding-y, 1px) + 1px));
+  }
+
+  // The real <input> sits inside this box, so `.form-control:focus` never
+  // matches it. Mirror Paragon's focus style (form-control-focus mixin) with
+  // :focus-within, using the same tokens, so it highlights like other inputs.
+  .fbr-searchable-select__chips:focus-within {
+    color: var(--pgn-color-form-input-focus-base);
+    background-color: var(--pgn-color-form-input-focus-bg);
+    border-color: var(--pgn-color-form-input-focus-border);
+    outline: 0;
+    box-shadow: var(--pgn-elevation-form-input-focus);
+  }
+
+  .fbr-searchable-select__chips--disabled {
+    background-color: #E9ECEF;
+    cursor: not-allowed;
+  }
+
+  .fbr-searchable-select__chips--invalid,
+  .fbr-searchable-select__chips--invalid:focus-within {
+    border: 1px solid #DC3545;
+    border-radius: .375rem;
+  }
+
+  .fbr-searchable-select__chip-input {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    border: none;
+    outline: none;
+    padding: 0;
+    font-size: inherit;
+    line-height: inherit;
+    background-color: transparent;
+  }
+
+  .fbr-searchable-select__listbox {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    border: 1px solid #CED4DA;
+    border-radius: .375rem;
+    background-color: #FFFFFF;
+    box-shadow: 0 4px 12px rgb(0 0 0 / .1);
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 2px;
+  }
+
+  .fbr-searchable-select__empty {
+    font-size: .875rem;
+  }
+
+  .fbr-searchable-select__option {
+    padding: .5rem .75rem;
+    cursor: pointer;
+    font-size: .875rem;
+    color: #212529;
+  }
+
+  .fbr-searchable-select__option--focused {
+    background-color: #F0F4FF;
+  }
+
+  .fbr-searchable-select__option--selected {
+    color: #0D6EFD;
+    font-weight: 600;
+  }
+}

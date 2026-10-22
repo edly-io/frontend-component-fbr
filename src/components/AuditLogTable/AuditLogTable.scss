@@ -1,0 +1,223 @@
+@use "@openedx/paragon/styles/css/core/custom-media-breakpoints" as paragonCustomMediaBreakpoints;
+
+// Merged from Studio's and fbr-home's AuditLogTable.scss. Layout follows Studio.
+// Colours use fbr-home's --sessions-* theme tokens (so its dark theme still
+// applies); the fallbacks are Studio's values, for hosts that don't define them.
+.audit-log {
+  &__filter-banner {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .75rem;
+    padding: .5rem .75rem;
+    background: var(--sessions-status-info-bg, #E8F4FD);
+    border: 1px solid var(--sessions-cal-popover-header-border, #BEE3F8);
+    border-radius: 4px;
+    font-size: .875rem;
+  }
+
+  &__filter-banner-clear {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--sessions-status-info-text, #0D6EFD);
+    font-size: .875rem;
+    padding: 0;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__filters {
+    gap: .75rem;
+    margin-bottom: 1rem;
+  }
+
+  &__search {
+    width: 100%;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      flex: 1 1 260px;
+      width: auto;
+      min-width: 220px;
+      max-width: 560px;
+    }
+  }
+
+  &__action {
+    width: 100%;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      flex: 0 0 auto;
+      width: 10.5rem;
+    }
+
+    .form-control {
+      cursor: pointer;
+    }
+  }
+
+  &__date-range {
+    gap: .375rem;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      flex-shrink: 0;
+    }
+  }
+
+  &__date-field {
+    gap: .375rem;
+    min-width: 0;
+  }
+
+  &__date-label {
+    flex: 0 0 2.25rem;
+    font-size: .8rem;
+    color: var(--sessions-text-muted, #6C757D);
+    white-space: nowrap;
+    margin-bottom: 0;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      flex: 0 0 auto;
+    }
+  }
+
+  // The date picker's outer wrapper: wide enough for DD/MM/YYYY plus its calendar icon.
+  &__date-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      flex: 0 0 auto;
+      width: 11rem;
+    }
+
+    @media (--pgn-size-breakpoint-min-width-lg) {
+      width: 12rem;
+    }
+  }
+
+  &__record-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: .375rem;
+  }
+
+  &__changes {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .25rem;
+  }
+
+  &__changes-fields {
+    font-size: .75rem;
+    color: var(--pgn-color-gray-500);
+  }
+
+  &__changes-btn,
+  &__history-btn {
+    white-space: nowrap;
+    min-height: 1.5rem;
+    padding: .125rem .5rem;
+    font-size: .75rem;
+    line-height: 1.5;
+
+    .pgn__icon {
+      width: .875rem;
+      height: .875rem;
+    }
+  }
+
+  &__table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+
+    .pgn__data-table {
+      min-width: 62rem;
+    }
+
+    &--narrow .pgn__data-table {
+      min-width: 36rem;
+    }
+  }
+
+  &__count {
+    color: var(--sessions-text-muted, #6C757D);
+    font-size: .8rem;
+
+    @media (--pgn-size-breakpoint-min-width-sm) {
+      margin-left: auto;
+    }
+  }
+
+  &__timestamp {
+    white-space: nowrap;
+    font-size: .85rem;
+  }
+
+  &__record {
+    min-width: 200px;
+  }
+
+  &__record-type {
+    font-size: .85rem;
+  }
+
+  &__record-repr {
+    font-size: .85rem;
+    font-weight: 500;
+    word-break: break-word;
+  }
+
+  &__record-id {
+    font-size: .75rem;
+    color: var(--sessions-text-muted, #6C757D);
+    margin-top: 2px;
+  }
+
+  .pgn__data-table-cell-wrap {
+    max-width: none;
+  }
+
+  .user-identity__content {
+    white-space: nowrap;
+  }
+}
+
+.audit-modal {
+  &__subtitle {
+    color: var(--sessions-text-muted, #6C757D);
+    display: block;
+    margin-top: .25rem;
+    font-size: .85rem;
+  }
+
+  &__empty {
+    color: var(--sessions-text-muted, #6C757D);
+    margin: 0;
+  }
+
+  &__td {
+    padding: .5rem .75rem;
+    word-break: break-all;
+
+    &--field {
+      font-weight: 500;
+      white-space: nowrap;
+      word-break: normal;
+    }
+
+    &--old {
+      color: var(--sessions-text-danger, #DC3545);
+    }
+
+    &--new {
+      color: var(--sessions-text-success, #198754);
+    }
+  }
+}

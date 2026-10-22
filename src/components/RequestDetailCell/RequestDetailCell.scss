@@ -1,0 +1,38 @@
+.fbr-request-badge {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--category {
+    margin-left: 4px;
+  }
+
+  &--casual {
+    color: #374151;
+    background: #F3F4F6;
+  }
+
+  &--med {
+    color: #0369A1;
+    background: #E0F2FE;
+  }
+
+  &--emer {
+    color: #B91C1C;
+    background: #FEE2E2;
+  }
+
+  &--full-day {
+    color: #0F766E;
+    background: #CCFBF1;
+  }
+
+  &--session-specific {
+    color: #1D4ED8;
+    background: #DBEAFE;
+  }
+}

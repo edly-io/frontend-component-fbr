@@ -26,8 +26,24 @@ This package compiles TypeScript/TSX source under `src/` into a CommonJS `dist/`
 build with accompanying `.d.ts` declaration files. It is consumed as an npm
 dependency by Open edX MFEs and is **not** a standalone application — it has no
 dev server, no routes, and no bundling of its own. Consumers bring their own
-React, `react-dom`, and `@openedx/paragon` (declared as `peerDependencies` so
+React, `react-dom`, `@openedx/paragon` and the other libraries listed under
+[Peer dependencies](#peer-dependencies) (declared as `peerDependencies` so
 only one copy of each ends up in the final app bundle).
+
+### What the library provides
+
+| Area | Exports |
+| --- | --- |
+| Program calendar | `ProgramCalendar` (props `programKey`, `basePath`), `ProgramCalendarProvider`, `useProgramCalendar`, `buildRosterPath`, `buildAuditPath`, `CalendarPdfDownloadButton` |
+| Shared components | `AuditLogTable`, `DatepickerControl`, `SearchableSelect`, `MobileRowCardsList` / `MobileRowCard` / `MobileRowField`, `SectionHeading`, `RequestStatusBadge`, `ScopeBadge`, `InstructingBadge`, `RequestDetailCell`, `RequestSummary`, `SessionLeavesPanel`, `UserIdentity`, `DebouncedSearch`, certificate components |
+| Data | FBR API functions (sessions, programs, holidays, locations, requests, audit logs, `/config/`) and TanStack Query hooks for them (`useCalendarSessions`, `useConfig`, `useCreateSession`, ...), plus `fbrKeys` query keys |
+| Utils | Date and format helpers, FBR constants (`USER_ROLE`, `REQUEST_STATUS`, ...), `useModalParams`, `useIsBelowLg` |
+
+Components that fetch data need a TanStack `QueryClientProvider`, a
+react-router v6 router and an `IntlProvider` (the MFE's `AppProvider`) above
+them. Every library query sets its own `staleTime`, so the host's QueryClient
+defaults don't make library data stale. All library query keys start with
+`'fbr'`.
 
 ## Prerequisites
 
@@ -49,12 +65,19 @@ only one copy of each ends up in the final app bundle).
 npm install @edly-io/frontend-component-fbr
 ```
 
-Peer dependencies must already be present in the consuming project (they
-almost always are, in any Open edX MFE):
+### Peer dependencies
+
+Peer dependencies must already be present in the consuming project:
 
 ```bash
-npm install @openedx/paragon@^23.5.0 react@^18.3.1 react-dom@^18.3.1
+npm install @openedx/paragon@^23.5.0 react@^18.3.1 react-dom@^18.3.1 \
+  @edx/frontend-platform@^8.4.0 react-router-dom@^6.30.1 @tanstack/react-query@^5.90.5 \
+  react-datepicker@^4.25.0 date-fns@^2.30.0 @react-pdf/renderer@^4.9.0 classnames@^2.3.2
 ```
+
+`react-datepicker` must be a 4.x release. Its CSS
+(`react-datepicker/dist/react-datepicker.css`) is imported by the host app.
+`@react-pdf/renderer` is only loaded when a user downloads the calendar PDF.
 
 ### From GitHub (no npm publish required)
 
@@ -280,6 +303,26 @@ loop, and works inside Tutor once mounted correctly), but validate with an
 
 If you use `file:` or `npm link` and hit duplicate-React errors, see
 [Troubleshooting](#troubleshooting).
+
+## Releasing (GitHub tags)
+
+FBR apps install this library from GitHub and pin an exact release tag in
+`package.json`, e.g. `"@edly-io/frontend-component-fbr": "github:edly-io/frontend-component-fbr#v2.0.0"`.
+A release is:
+
+1. **In the feature PR, bump the version** following semver, without creating a tag:
+   `npm version <major|minor|patch> --no-git-tag-version`. Use a major bump when
+   apps must change something to upgrade, for example a new or narrower peer dependency.
+2. **Merge the PR to `master`.**
+3. **Tag the merge commit and push the tag:**
+   `git checkout master && git pull && git tag v<version> && git push origin v<version>`.
+   Optionally create a GitHub Release from the tag with a short changelog.
+4. **In each app, pin the new tag** (`npm install github:edly-io/frontend-component-fbr#v<version>`)
+   in its own PR.
+
+Always bump the version for a release. webpack (dev server and builds) treats a
+package in `node_modules` as unchanged while its version is unchanged, so a new
+build under the same version can be served stale.
 
 ## Publishing
 

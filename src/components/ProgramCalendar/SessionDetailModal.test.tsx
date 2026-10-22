@@ -1,0 +1,216 @@
+import React from 'react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderWithProviders } from '../../testUtils';
+import SessionDetailModal from './SessionDetailModal';
+import { ProgramCalendarProvider } from './ProgramCalendarContext';
+import { CalendarSession, SessionDetailModalProps } from './types';
+
+const BASE_SESSION: CalendarSession = {
+  title: 'Test Session',
+  status: 'scheduled',
+  scheduled_start_time: '2999-06-01T10:00:00.000Z',
+  scheduled_end_time: '2999-06-01T11:00:00.000Z',
+};
+
+const withCalendar = (ui: React.ReactElement) => renderWithProviders(
+  <ProgramCalendarProvider programKey="prog-1" basePath="/programs/prog-1/">
+    {ui}
+  </ProgramCalendarProvider>,
+);
+
+const wrap = (session: CalendarSession, props: Partial<SessionDetailModalProps> = {}) => withCalendar(
+  <SessionDetailModal session={session} isOpen onClose={jest.fn()} {...props} />,
+);
+
+it('renders nothing when session is null', () => {
+  const { container } = withCalendar(
+    <SessionDetailModal session={null} isOpen onClose={jest.fn()} />,
+  );
+  expect(container).toBeEmptyDOMElement();
+});
+
+it('renders the session title', () => {
+  wrap(BASE_SESSION);
+  expect(screen.getByText('Test Session')).toBeInTheDocument();
+});
+
+it('renders course name when provided', () => {
+  wrap({ ...BASE_SESSION, course_name: 'Intro to Python' });
+  expect(screen.getByText('Intro to Python')).toBeInTheDocument();
+});
+
+it('renders description in a separate block', () => {
+  wrap({ ...BASE_SESSION, description: 'Topic overview for today' });
+  expect(screen.getByText('Topic overview for today')).toBeInTheDocument();
+});
+
+it('renders duration when provided', () => {
+  wrap({ ...BASE_SESSION, duration_minutes: 90 });
+  expect(screen.getByText('90 min')).toBeInTheDocument();
+});
+
+it('renders timezone when provided', () => {
+  wrap({ ...BASE_SESSION, timezone: 'Asia/Karachi' });
+  expect(screen.getByText('Asia/Karachi')).toBeInTheDocument();
+});
+
+it('renders instructor names when provided', () => {
+  wrap({ ...BASE_SESSION, instructor_names: ['Alice', 'Bob'] });
+  expect(screen.getByText('Alice, Bob')).toBeInTheDocument();
+});
+
+it('renders "Join meeting" button when join URL is set', () => {
+  wrap({
+    ...BASE_SESSION,
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+  });
+  expect(screen.getByRole('button', { name: /join meeting/i })).toBeInTheDocument();
+});
+
+it('renders "Join meeting" when only the trainee\'s own my_join_url is set', () => {
+  wrap({
+    ...BASE_SESSION,
+    meeting_id: 'mid',
+    my_join_url: 'https://zoom.us/w/mine',
+  });
+  expect(screen.getByRole('button', { name: /join meeting/i })).toBeInTheDocument();
+});
+
+it('joins via the trainee\'s own my_join_url, not the shared link', () => {
+  const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+  wrap({
+    ...BASE_SESSION,
+    meeting_id: 'mid',
+    my_join_url: 'https://zoom.us/w/mine',
+    meeting_join_url: 'https://zoom.us/j/shared',
+  });
+  fireEvent.click(screen.getByRole('button', { name: /join meeting/i }));
+  expect(openSpy.mock.calls[0][0]).toBe('https://zoom.us/w/mine');
+  openSpy.mockRestore();
+});
+
+it('renders "Start as host" for an admin on an upcoming Zoom session', () => {
+  // The host start link is fetched on demand, so it is no longer on the session;
+  // the button is gated on the viewer being a host (admin/instructor) of an
+  // upcoming Zoom meeting.
+  wrap({
+    ...BASE_SESSION,
+    scheduled_start_time: '2999-06-01T10:00:00.000Z',
+    scheduled_end_time: '2999-06-01T11:00:00.000Z',
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+  }, { canManageSessions: true });
+  expect(screen.getByRole('button', { name: /start as host/i })).toBeInTheDocument();
+});
+
+it('shows "Join meeting" (not Start) for a non-host viewer', () => {
+  wrap({
+    ...BASE_SESSION,
+    scheduled_start_time: '2999-06-01T10:00:00.000Z',
+    scheduled_end_time: '2999-06-01T11:00:00.000Z',
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+  });
+  expect(screen.queryByRole('button', { name: /start as host/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /join meeting/i })).toBeInTheDocument();
+});
+
+it('hides "Start as host" for a host once scheduled_end_time has passed', () => {
+  wrap({
+    ...BASE_SESSION,
+    scheduled_start_time: '2020-06-01T10:00:00.000Z',
+    scheduled_end_time: '2020-06-01T11:00:00.000Z',
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+  }, { canManageSessions: true });
+  expect(screen.queryByRole('button', { name: /start as host/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /join meeting/i })).not.toBeInTheDocument();
+});
+
+it('hides "Join meeting" for a non-host viewer once scheduled_end_time has passed', () => {
+  wrap({
+    ...BASE_SESSION,
+    scheduled_start_time: '2020-06-01T10:00:00.000Z',
+    scheduled_end_time: '2020-06-01T11:00:00.000Z',
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+  });
+  expect(screen.queryByRole('button', { name: /join meeting/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /start as host/i })).not.toBeInTheDocument();
+});
+
+it('renders meeting password when provided', () => {
+  wrap({
+    ...BASE_SESSION,
+    meeting_id: 'mid',
+    meeting_join_url: 'https://zoom.us/j/123',
+    meeting_password: 'secret',
+  });
+  expect(screen.getByText('secret')).toBeInTheDocument();
+});
+
+it('calls onClose when the footer Close button is clicked', () => {
+  const onClose = jest.fn();
+  wrap(BASE_SESSION, { onClose });
+  // The modal has two "Close" buttons (header X + footer text button); target the footer one
+  const closeButtons = screen.getAllByRole('button', { name: /close/i });
+  fireEvent.click(closeButtons[closeButtons.length - 1]);
+  expect(onClose).toHaveBeenCalled();
+});
+
+it('renders weekly recurrence summary', () => {
+  wrap({
+    ...BASE_SESSION,
+    is_recurring: true,
+    recurrence: { type: 2, repeat_interval: 1, end_times: 5 },
+  });
+  expect(screen.getByText(/Weekly/i)).toBeInTheDocument();
+  expect(screen.getByText(/5 occurrences/i)).toBeInTheDocument();
+});
+
+it('shows Zoom platform label for zoom platform sessions', () => {
+  wrap({ ...BASE_SESSION, platform: 'zoom' });
+  expect(screen.getByText('Zoom')).toBeInTheDocument();
+});
+
+it('shows In Class label for manual platform sessions', () => {
+  wrap({ ...BASE_SESSION, platform: 'manual' });
+  expect(screen.getByText('In Class')).toBeInTheDocument();
+});
+
+it('shows session type as its own field using configured labels', () => {
+  wrap(
+    { ...BASE_SESSION, session_type: 'ceremony' },
+    { sessionTypeLabels: { ceremony: 'Ceremony' } },
+  );
+  expect(screen.getByText('Session type')).toBeInTheDocument();
+  expect(screen.getByText('Ceremony')).toBeInTheDocument();
+});
+
+it('falls back to formatted backend session type when no configured label exists', () => {
+  wrap({ ...BASE_SESSION, session_type: 'special_event' });
+  expect(screen.getByText('Special Event')).toBeInTheDocument();
+});
+
+describe('admin links', () => {
+  const linkedSession: CalendarSession = { ...BASE_SESSION, id: 5, course_id: 'course-v1:X' };
+
+  it('links "View roster" to the session roster under the base path', () => {
+    wrap(linkedSession, { canManageSessions: true });
+    expect(screen.getByRole('link', { name: /view roster/i }))
+      .toHaveAttribute('href', '/programs/prog-1/attendance/sessions/5?course_id=course-v1%3AX');
+  });
+
+  it('links "View history" to the session audit log under the base path', () => {
+    wrap(linkedSession, { canManageSessions: true });
+    expect(screen.getByRole('link', { name: /view history/i }))
+      .toHaveAttribute('href', '/programs/prog-1/calendar?view=audit-log&record_id=5');
+  });
+
+  it('hides both links from a viewer who cannot manage sessions', () => {
+    wrap(linkedSession);
+    expect(screen.queryByRole('link', { name: /view roster/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /view history/i })).not.toBeInTheDocument();
+  });
+});

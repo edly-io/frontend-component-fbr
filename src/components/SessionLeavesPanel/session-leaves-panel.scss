@@ -1,0 +1,41 @@
+// Copied from fbr-home `requests/requests.scss` (`.requests-view__*` and
+// `.requests-filters__label`), renamed to this component's block. The
+// --sessions-* tokens come from the host theme; the fallbacks are fbr-home's
+// light-theme values, for hosts (Studio) that don't define them.
+.fbr-session-leaves-panel {
+  &__inline-status {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  &__leave-list {
+    padding-left: 20px;
+    margin: 0;
+  }
+
+  &__leave-item {
+    margin-bottom: 10px;
+  }
+
+  // Paragon's `text-warning` is a pure yellow that fails on white, so the
+  // original amber is kept here.
+  &__leave-count--some {
+    color: var(--sessions-text-warning, #D97706);
+  }
+
+  &__leave-count--none {
+    color: var(--sessions-text-muted, #6C757D);
+  }
+}
+
+// Element-qualified so the label's type scale wins over Paragon's own
+// `.pgn__form-label`, whichever order the two stylesheets land in.
+label.fbr-session-leaves-panel__search-label {
+  display: block;
+  margin-bottom: .25rem;
+  font-size: .8rem;
+  line-height: 1.4;
+  color: var(--sessions-text-muted, #6C757D);
+  white-space: nowrap;
+}

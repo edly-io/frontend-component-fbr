@@ -1,0 +1,707 @@
+import React from 'react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../testUtils';
+import { correctSession, createSession, updateSession } from '../../data/sessions/api';
+import { fetchProgramCourses, fetchProgramInstructors } from '../../data/programs/api';
+import { getSessionsConfig } from '../../data/config/api';
+import { getLocations } from '../../data/locations/api';
+import { getApprovedLeaves } from '../../data/requests/api';
+import ScheduleMeetingModal from './ScheduleMeetingModal';
+import { ScheduleMeetingModalProps, ScheduleSession } from './types';
+
+jest.mock('../../data/sessions/api');
+jest.mock('../../data/programs/api');
+jest.mock('../../data/config/api');
+jest.mock('../../data/locations/api');
+jest.mock('../../data/requests/api');
+
+const mockedCreateSession = jest.mocked(createSession);
+const mockedUpdateSession = jest.mocked(updateSession);
+const mockedCorrectSession = jest.mocked(correctSession);
+const mockedFetchProgramCourses = jest.mocked(fetchProgramCourses);
+const mockedFetchProgramInstructors = jest.mocked(fetchProgramInstructors);
+const mockedGetSessionsConfig = jest.mocked(getSessionsConfig);
+const mockedGetLocations = jest.mocked(getLocations);
+const mockedGetApprovedLeaves = jest.mocked(getApprovedLeaves);
+
+// jsdom has no layout, so the modal's scroll-into-view calls would throw.
+Element.prototype.scrollIntoView = jest.fn();
+
+const COURSE = { course_key: 'course-v1:X+Y+Z', display_name: 'Intro to Python' };
+const INSTRUCTOR = {
+  id: 7, first_name: 'Alice', last_name: 'Smith', username: 'alice', email: 'alice@example.com',
+};
+const LOCATION = { id: 3, name: 'Room A' };
+
+const wrap = (props: Partial<ScheduleMeetingModalProps> = {}) => renderWithProviders(
+  <ScheduleMeetingModal
+    isOpen
+    onClose={jest.fn()}
+    onSuccess={jest.fn()}
+    programKey="prog-1"
+    session={null}
+    holidays={[]}
+    {...props}
+  />,
+);
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedFetchProgramCourses.mockResolvedValue([COURSE]);
+  mockedFetchProgramInstructors.mockResolvedValue([INSTRUCTOR]);
+  mockedGetLocations.mockResolvedValue({ count: 1, results: [LOCATION] });
+  mockedGetSessionsConfig.mockResolvedValue({
+    user_role: 'admin',
+    session_types: [
+      { value: 'session', label: 'Session' },
+      { value: 'workshop', label: 'Workshop' },
+    ],
+    lecture_duration_choices_minutes: [60, 90, 120],
+  });
+  mockedGetApprovedLeaves.mockResolvedValue([]);
+  mockedCreateSession.mockResolvedValue({ id: 1 });
+  mockedUpdateSession.mockResolvedValue({ id: 1 });
+  mockedCorrectSession.mockResolvedValue({ id: 1 });
+});
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+/** A local YYYY-MM-DD at least two weeks ahead, landing on the given JS weekday (0=Sun). */
+const futureDateOn = (jsWeekday: number) => {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + 14);
+  d.setDate(d.getDate() + ((jsWeekday - d.getDay() + 7) % 7));
+  return d.toLocaleDateString('en-CA');
+};
+
+const MONDAY = futureDateOn(1);
+const SATURDAY = futureDateOn(6);
+const SUNDAY = futureDateOn(0);
+
+const isoAt = (date: string, time: string) => new Date(`${date}T${time}`).toISOString();
+
+// ─── Form helpers ─────────────────────────────────────────────────────────────
+
+// Paragon's Form.Group rewrites the id of a Form.Control, so the single-select
+// inputs are reachable by label and the multi-select (a bare input) by its id.
+const courseInput = () => screen.getByLabelText(/^Course/);
+const locationInput = () => screen.getByLabelText(/^Location/);
+const instructorInput = () => document.getElementById('session-instructor');
+
+const selectFromSearchable = async (getInput: () => HTMLElement | null, optionLabel: string) => {
+  fireEvent.focus(getInput() as HTMLElement);
+  const option = await screen.findByText(optionLabel);
+  fireEvent.mouseDown(option);
+};
+
+// The date fields are DatepickerControls, which take typed input as DD/MM/YYYY.
+const displayDate = (isoDate: string) => isoDate.split('-').reverse().join('/');
+const recurrenceEndDateInput = () => screen.getByLabelText('Recurrence end date');
+
+const fillRequiredFields = async ({
+  startDate = MONDAY, startTime = '10:00', endDate = startDate, endTime = '11:00',
+} = {}) => {
+  fireEvent.change(screen.getByPlaceholderText('e.g., Week 5 Live Session'), {
+    target: { name: 'title', value: 'Week 5 Live Session' },
+  });
+  await selectFromSearchable(courseInput, COURSE.display_name);
+  await selectFromSearchable(instructorInput, 'Alice Smith');
+  await selectFromSearchable(locationInput, LOCATION.name);
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: displayDate(startDate) } });
+  fireEvent.change(screen.getByLabelText('Start time'), { target: { value: startTime } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: displayDate(endDate) } });
+  fireEvent.change(screen.getByLabelText('End time'), { target: { value: endTime } });
+};
+
+const toggleRecurring = () => fireEvent.click(document.getElementById('recurring-meeting-toggle') as HTMLElement);
+const toggleZoom = () => fireEvent.click(document.getElementById('create-zoom-meeting-toggle') as HTMLElement);
+const submitCreate = () => fireEvent.click(screen.getByRole('button', { name: /^create session$/i }));
+const submitUpdate = () => fireEvent.click(screen.getByRole('button', { name: /^update session$/i }));
+
+// The recurrence rules are an opaque API payload here, so the tests read them loosely.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const lastCreatePayload = (): Record<string, any> => (
+  mockedCreateSession.mock.calls[mockedCreateSession.mock.calls.length - 1][0]
+);
+
+// ─── Create: non-recurring ────────────────────────────────────────────────────
+
+describe('create mode — non-recurring', () => {
+  it('sends a single-session payload with is_recurring false and no recurrence', async () => {
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    const payload = lastCreatePayload();
+    expect(payload).toMatchObject({
+      program_key: 'prog-1',
+      session_type: 'session',
+      course_id: COURSE.course_key,
+      title: 'Week 5 Live Session',
+      scheduled_start_time: isoAt(MONDAY, '10:00'),
+      scheduled_end_time: isoAt(MONDAY, '11:00'),
+      instructor_emails: [INSTRUCTOR.email],
+      location_id: LOCATION.id,
+      create_zoom_meeting: false,
+      is_recurring: false,
+    });
+    expect(payload).not.toHaveProperty('recurrence');
+  });
+
+  it('calls onSuccess with the created session', async () => {
+    const onSuccess = jest.fn();
+    mockedCreateSession.mockResolvedValue({ id: 42, title: 'Week 5 Live Session' });
+    wrap({ onSuccess });
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ id: 42, title: 'Week 5 Live Session' }));
+  });
+});
+
+// ─── Create: recurring ────────────────────────────────────────────────────────
+
+describe('create mode — recurring', () => {
+  it('sends recurrence rules for an in-person series (Zoom off)', async () => {
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload()).toMatchObject({
+      create_zoom_meeting: false,
+      is_recurring: true,
+      recurrence: {
+        repeat_interval: 1, type: 2, weekly_days: '2', end_times: 10,
+      },
+    });
+  });
+
+  it('sends the same recurrence rules when Zoom is on', async () => {
+    wrap();
+    await fillRequiredFields();
+    toggleZoom();
+    toggleRecurring();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload()).toMatchObject({
+      create_zoom_meeting: true,
+      is_recurring: true,
+      recurrence: {
+        repeat_interval: 1, type: 2, weekly_days: '2', end_times: 10,
+      },
+    });
+  });
+
+  it('seeds weekly_days to Saturday (7) from a Saturday start date', async () => {
+    wrap();
+    await fillRequiredFields({ startDate: SATURDAY });
+    toggleRecurring();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload().recurrence.weekly_days).toBe('7');
+  });
+
+  it('seeds weekly_days to Sunday (1) from a Sunday start date', async () => {
+    wrap();
+    await fillRequiredFields({ startDate: SUNDAY });
+    toggleRecurring();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload().recurrence.weekly_days).toBe('1');
+  });
+
+  it('sends multiple weekdays sorted and comma-joined', async () => {
+    wrap();
+    await fillRequiredFields(); // Monday start seeds [2]
+    toggleRecurring();
+    // Add Friday (6) then Wednesday (4) — out of order on purpose.
+    fireEvent.click(screen.getByRole('button', { name: 'F' }));
+    fireEvent.click(screen.getByRole('button', { name: 'W' }));
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload().recurrence.weekly_days).toBe('2,4,6');
+  });
+
+  it('sends type 1 with no weekly_days for a daily series', async () => {
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    fireEvent.change(screen.getByDisplayValue('week'), { target: { value: 'daily' } });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    const { recurrence } = lastCreatePayload();
+    expect(recurrence.type).toBe(1);
+    expect(recurrence).not.toHaveProperty('weekly_days');
+  });
+
+  it('sends type 3 with monthly_day for a monthly day-of-month series', async () => {
+    const startDate = futureDateOn(1);
+    wrap();
+    await fillRequiredFields({ startDate });
+    toggleRecurring();
+    fireEvent.change(screen.getByDisplayValue('week'), { target: { value: 'monthly' } });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    const { recurrence } = lastCreatePayload();
+    expect(recurrence.type).toBe(3);
+    const dayOfMonth = Number(startDate.slice(8, 10));
+    if (dayOfMonth <= 28) {
+      expect(recurrence.monthly_day).toBe(dayOfMonth);
+    } else {
+      // Day 29-31 forces the weekday pattern — it does not exist in every month.
+      expect(recurrence).not.toHaveProperty('monthly_day');
+      expect(recurrence.monthly_week_day).toBe(2);
+    }
+  });
+
+  it('sends end_date_time instead of end_times when Ends-on is chosen', async () => {
+    const endDate = futureDateOn(1); // a Monday ~2 weeks out; within the 2-month cap
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    fireEvent.change(recurrenceEndDateInput(), { target: { value: displayDate(endDate) } });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    const { recurrence } = lastCreatePayload();
+    expect(recurrence.end_date_time).toBe(new Date(`${endDate}T23:59:59`).toISOString());
+    expect(recurrence).not.toHaveProperty('end_times');
+  });
+
+  it('clamps the occurrence count to 30', async () => {
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    const countInput = screen.getByDisplayValue('10');
+    fireEvent.change(countInput, { target: { value: '45' } });
+    expect((countInput as HTMLInputElement).value).toBe('30');
+  });
+});
+
+// ─── Create: recurrence validation ────────────────────────────────────────────
+
+describe('recurrence validation', () => {
+  it('blocks a weekly series with no weekday selected', async () => {
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    fireEvent.click(screen.getByRole('button', { name: 'M' })); // deselect the seeded Monday
+    submitCreate();
+
+    await waitFor(() => expect(screen.getByText('Select at least one weekday')).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('blocks an end date earlier than the start date', async () => {
+    const past = '2020-01-01';
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    fireEvent.change(recurrenceEndDateInput(), { target: { value: displayDate(past) } });
+    submitCreate();
+
+    await waitFor(() => expect(screen.getByText('End date must be after the start date')).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('blocks an end date more than 2 months past the start date', async () => {
+    const far = new Date(`${MONDAY}T12:00:00`);
+    far.setMonth(far.getMonth() + 4);
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    fireEvent.change(recurrenceEndDateInput(), { target: { value: displayDate(far.toLocaleDateString('en-CA')) } });
+    submitCreate();
+
+    await waitFor(() => expect(
+      screen.getByText('End date cannot be more than 2 months from the start date.'),
+    ).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Create: base validation ──────────────────────────────────────────────────
+
+describe('base validation', () => {
+  it('requires a title', async () => {
+    wrap();
+    await fillRequiredFields();
+    fireEvent.change(screen.getByPlaceholderText('e.g., Week 5 Live Session'), {
+      target: { name: 'title', value: '' },
+    });
+    submitCreate();
+
+    await waitFor(() => expect(screen.getByText('Title is required')).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects a duration that is not 60, 90 or 120 minutes', async () => {
+    wrap();
+    await fillRequiredFields({ endTime: '10:45' });
+    submitCreate();
+
+    await waitFor(() => expect(
+      screen.getByText('Session duration must be 1 hour, 1 hour 30 minutes, or 2 hours'),
+    ).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects a start time in the past', async () => {
+    wrap();
+    await fillRequiredFields({ startDate: '2020-01-06' });
+    submitCreate();
+
+    await waitFor(() => expect(screen.getByText('Start time must be in the future')).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Duration policy by session type ──────────────────────────────────────────
+
+describe('duration policy by session type', () => {
+  const selectWorkshop = async () => {
+    const select = await screen.findByDisplayValue('Session');
+    fireEvent.change(select, { target: { value: 'workshop' } });
+  };
+
+  // A non-lecture type needs no course, instructor or location — only a title
+  // and a time range.
+  const fillEventFields = ({ endDate = MONDAY, endTime }: { endDate?: string; endTime: string }) => {
+    fireEvent.change(screen.getByPlaceholderText('e.g., Week 5 Live Session'), {
+      target: { name: 'title', value: 'Graduation Workshop' },
+    });
+    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: displayDate(MONDAY) } });
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '10:00' } });
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: displayDate(endDate) } });
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: endTime } });
+  };
+
+  it('accepts an off-slot duration for a non-lecture type', async () => {
+    wrap();
+    await selectWorkshop();
+    fillEventFields({ endTime: '10:45' });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(lastCreatePayload()).toMatchObject({ session_type: 'workshop' });
+  });
+
+  it('accepts a full-day duration for a non-lecture type', async () => {
+    wrap();
+    await selectWorkshop();
+    fillEventFields({ endTime: '19:00' });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+  });
+
+  it('accepts a multi-day duration for a non-lecture type', async () => {
+    // No ceiling applies to a non-lecture type.
+    const threeDaysOn = new Date(`${MONDAY}T12:00:00`);
+    threeDaysOn.setDate(threeDaysOn.getDate() + 3);
+    wrap();
+    await selectWorkshop();
+    fillEventFields({ endDate: threeDaysOn.toLocaleDateString('en-CA'), endTime: '17:00' });
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+  });
+
+  it('scopes the instructor list to the picked course even for a non-lecture session type', async () => {
+    // Regression: when session_type was not 'session', the modal used to drop
+    // the course_id from the instructors call and list every city instructor,
+    // even after a course was picked.
+    wrap();
+    await selectWorkshop();
+    await selectFromSearchable(courseInput, COURSE.display_name);
+
+    await waitFor(() => {
+      const call = mockedFetchProgramInstructors.mock.calls.at(-1);
+      expect(call).toEqual(['prog-1', COURSE.course_key]);
+    });
+  });
+
+  it('follows the slots the API serves rather than hardcoded ones', async () => {
+    mockedGetSessionsConfig.mockResolvedValue({
+      user_role: 'admin',
+      session_types: [
+        { value: 'session', label: 'Session' },
+        { value: 'workshop', label: 'Workshop' },
+      ],
+      lecture_duration_choices_minutes: [45, 90],
+    });
+    wrap();
+    await fillRequiredFields({ endTime: '11:00' }); // 1h — a slot today, not here
+    submitCreate();
+
+    await waitFor(() => expect(
+      screen.getByText('Session duration must be 45 minutes, or 1 hour 30 minutes'),
+    ).toBeInTheDocument());
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('skips the client-side check when the config call fails', async () => {
+    // The backend still validates; the form must not invent a limit of its own.
+    mockedGetSessionsConfig.mockRejectedValue(new Error('boom'));
+    wrap();
+    fillEventFields({ endTime: '10:45' });
+    await selectFromSearchable(courseInput, COURSE.display_name);
+    await selectFromSearchable(instructorInput, 'Alice Smith');
+    await selectFromSearchable(locationInput, LOCATION.name);
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+  });
+});
+
+// ─── Edit mode ────────────────────────────────────────────────────────────────
+
+describe('edit mode', () => {
+  const futureSession = (): ScheduleSession => ({
+    id: 9,
+    title: 'Week 5 Live Session',
+    description: 'notes',
+    session_type: 'session',
+    course_id: COURSE.course_key,
+    instructor_emails: [INSTRUCTOR.email],
+    location: { id: LOCATION.id, name: LOCATION.name },
+    scheduled_start_time: new Date(`${MONDAY}T10:00`).toISOString(),
+    scheduled_end_time: new Date(`${MONDAY}T11:00`).toISOString(),
+    is_recurring: true,
+    recurrence: {
+      type: 2, repeat_interval: 1, weekly_days: '2', end_times: 4,
+    },
+  });
+
+  it('never resends recurrence rules — an edit applies to one occurrence', async () => {
+    wrap({ session: futureSession() });
+    await screen.findByText('Alice Smith'); // wait for the instructor prefill
+    submitUpdate();
+
+    await waitFor(() => expect(mockedUpdateSession).toHaveBeenCalledTimes(1));
+    const [sessionId, payload] = mockedUpdateSession.mock.calls[0];
+    expect(sessionId).toBe(9);
+    expect(payload).not.toHaveProperty('is_recurring');
+    expect(payload).not.toHaveProperty('recurrence');
+    expect(payload).toMatchObject({
+      title: 'Week 5 Live Session',
+      course_id: COURSE.course_key,
+      instructor_emails: [INSTRUCTOR.email],
+      location_id: LOCATION.id,
+    });
+  });
+
+  it('locks the Recurring checkbox on an existing series', async () => {
+    wrap({ session: futureSession() });
+    await screen.findByText('Alice Smith');
+    const checkbox = document.getElementById('recurring-meeting-toggle');
+    expect(checkbox).toBeChecked();
+    expect(checkbox).toBeDisabled();
+  });
+
+  it('locks the Recurring checkbox on an existing non-recurring session', async () => {
+    wrap({ session: { ...futureSession(), is_recurring: false, recurrence: {} } });
+    await screen.findByText('Alice Smith');
+    const checkbox = document.getElementById('recurring-meeting-toggle');
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeDisabled();
+  });
+
+  it('prefills the recurrence panel from the session rules', async () => {
+    wrap({ session: futureSession() });
+    await screen.findByText('Alice Smith');
+    expect(screen.getByDisplayValue('week')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('4')).toBeInTheDocument();
+  });
+});
+
+// ─── Past session (correction mode) ───────────────────────────────────────────
+
+describe('correction mode', () => {
+  const pastSession: ScheduleSession = {
+    id: 11,
+    title: 'Old Session',
+    session_type: 'session',
+    course_id: COURSE.course_key,
+    instructor_emails: [INSTRUCTOR.email],
+    location: { id: LOCATION.id, name: LOCATION.name },
+    scheduled_start_time: '2020-01-06T10:00:00.000Z',
+    scheduled_end_time: '2020-01-06T11:00:00.000Z',
+  };
+
+  it('sends only the changed fields through correctSession', async () => {
+    wrap({ session: pastSession });
+    await screen.findByText('Alice Smith');
+    // Drop the location — the only change.
+    fireEvent.change(locationInput(), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: /^save corrections$/i }));
+
+    await waitFor(() => expect(mockedCorrectSession).toHaveBeenCalledTimes(1));
+    expect(mockedCorrectSession).toHaveBeenCalledWith(11, { location_id: null });
+    expect(mockedUpdateSession).not.toHaveBeenCalled();
+  });
+
+  it('refuses to save when nothing changed', async () => {
+    wrap({ session: pastSession });
+    await screen.findByText('Alice Smith');
+    fireEvent.click(screen.getByRole('button', { name: /^save corrections$/i }));
+
+    await waitFor(() => expect(
+      screen.getByText('No changes detected. Update the course, instructors, or location before saving.'),
+    ).toBeInTheDocument());
+    expect(mockedCorrectSession).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Description-only mode ────────────────────────────────────────────────────
+
+describe('description-only mode', () => {
+  it('sends only the description and skips the admin-only lookups', async () => {
+    const session: ScheduleSession = {
+      id: 12,
+      title: 'Week 5 Live Session',
+      description: 'old notes',
+      course_id: COURSE.course_key,
+      course_name: 'Intro to Python',
+      instructor_names: ['Alice Smith'],
+      instructor_emails: [INSTRUCTOR.email],
+      scheduled_start_time: new Date(`${MONDAY}T10:00`).toISOString(),
+      scheduled_end_time: new Date(`${MONDAY}T11:00`).toISOString(),
+    };
+    wrap({ session, descriptionOnly: true });
+    fireEvent.change(screen.getByPlaceholderText('Add session details...'), {
+      target: { name: 'description', value: 'new notes' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^update session$/i }));
+
+    await waitFor(() => expect(mockedUpdateSession).toHaveBeenCalledWith(12, { description: 'new notes' }));
+    expect(mockedFetchProgramCourses).not.toHaveBeenCalled();
+    expect(mockedFetchProgramInstructors).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Conflict handling (HTTP 409) ─────────────────────────────────────────────
+
+describe('conflict handling', () => {
+  const reject409 = (data: object) => Object.assign(new Error('conflict'), { response: { status: 409, data } });
+
+  it('shows a hard conflict and offers no override', async () => {
+    mockedCreateSession.mockRejectedValue(reject409({
+      conflict_type: 'ROOM_DOUBLE_BOOKING',
+      message: 'Room A is already booked (occurrence on 2026-10-05)',
+      override_allowed: false,
+      affected_entities: [{ type: 'room', name: 'Room A', session_title: 'Other Session' }],
+      resolution_hints: [],
+    }));
+    wrap();
+    await fillRequiredFields();
+    toggleRecurring();
+    submitCreate();
+
+    await waitFor(() => expect(
+      screen.getByText('Room A is already booked (occurrence on 2026-10-05)'),
+    ).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /proceed anyway/i })).not.toBeInTheDocument();
+  });
+
+  it('resubmits with acknowledge:true when the admin proceeds past a soft conflict', async () => {
+    mockedCreateSession
+      .mockRejectedValueOnce(reject409({
+        conflict_type: 'PROTECTED_DATE',
+        message: 'Eid al-Fitr is a public holiday on this date',
+        override_allowed: true,
+        affected_entities: [],
+        resolution_hints: [],
+      }))
+      .mockResolvedValueOnce({ id: 77 });
+    const onSuccess = jest.fn();
+    wrap({ onSuccess });
+    await fillRequiredFields();
+    submitCreate();
+
+    const proceed = await screen.findByRole('button', { name: /proceed anyway/i });
+    fireEvent.click(proceed);
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(2));
+    expect(lastCreatePayload()).toMatchObject({ acknowledge: true });
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ id: 77 }));
+  });
+
+  it('shows a plain error for a non-409 failure', async () => {
+    mockedCreateSession.mockRejectedValue({ response: { status: 500, data: { detail: 'Zoom unavailable' } } });
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(screen.getByText('Zoom unavailable')).toBeInTheDocument());
+  });
+
+  it('names the rejected trainee for a Zoom registrant-rejection error', async () => {
+    mockedCreateSession.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          error: 'zoom_registrant_rejected',
+          detail: "Zoom rejected these trainees' registration.",
+          emails: ['bad@example.com'],
+        },
+      },
+    });
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(
+      screen.getByText("Zoom rejected these trainees' registration."),
+    ).toBeInTheDocument());
+    expect(screen.getByText('bad@example.com')).toBeInTheDocument();
+  });
+});
+
+// ─── Soft scheduling warnings ─────────────────────────────────────────────────
+
+describe('scheduling warnings', () => {
+  it('warns on a weekend start date without blocking', async () => {
+    wrap();
+    await fillRequiredFields({ startDate: SATURDAY });
+    expect(screen.getByText(/Saturday is a weekend day/)).toBeInTheDocument();
+    submitCreate();
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+  });
+
+  it('warns on a public holiday start date without blocking', async () => {
+    wrap({
+      holidays: [{
+        id: 1, name: 'Eid al-Fitr', start_date: MONDAY, end_date: MONDAY,
+      }],
+    });
+    await fillRequiredFields();
+    expect(screen.getByText(/Eid al-Fitr is a public holiday/)).toBeInTheDocument();
+    submitCreate();
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+  });
+
+  it('blocks an instructor who is on approved leave that day', async () => {
+    mockedGetApprovedLeaves.mockResolvedValue([{
+      submitter_email: INSTRUCTOR.email,
+      leave_start_date: MONDAY,
+      leave_end_date: MONDAY,
+    }]);
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).not.toHaveBeenCalled());
+    expect(screen.getAllByText(/is on approved leave on this date/).length).toBeGreaterThan(0);
+  });
+});
