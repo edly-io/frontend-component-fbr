@@ -172,3 +172,13 @@ it('shows a loading spinner when loading is true', () => {
   fireEvent.change(input, { target: { value: 'a' } });
   expect(screen.getByRole('listbox')).toBeInTheDocument();
 });
+
+it('uses Paragon\'s leading-icon layout in multi-select mode, like single-select', () => {
+  // Paragon positions the text after the icon via `.has-prepended-node .form-control`;
+  // the chip container must opt in the same way so both modes line up.
+  const { container } = render(<ControlledSelect multiple />);
+  const group = container.querySelector('.pgn__form-control-decorator-group');
+  expect(group).toHaveClass('has-prepended-node');
+  expect(group).toHaveClass('has-leading-element');
+  expect(group?.querySelector('.form-control')).not.toBeNull();
+});

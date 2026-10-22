@@ -151,7 +151,10 @@ const SearchableSelect = (props: SearchableSelectProps) => {
   };
 
   const renderMultiInput = () => (
-    <div className="pgn__form-control-decorator-group">
+    // Same classes Paragon's FormControlDecoratorGroup adds for a leading icon, so
+    // its own `.has-prepended-node .form-control` rule spaces the chips and text
+    // after the icon exactly as in single-select mode.
+    <div className="pgn__form-control-decorator-group has-prepended-node has-leading-element">
       <div className="pgn__form-control-decorator pgn__form-control-decorator-leading">
         <Icon src={Search} />
       </div>
