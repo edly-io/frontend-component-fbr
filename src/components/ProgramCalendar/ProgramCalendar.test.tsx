@@ -185,6 +185,29 @@ it('removes a session an admin deletes from the calendar without a reload', asyn
   expect(http.delete).toHaveBeenCalledWith(expect.stringContaining(`/sessions/${FUTURE_SESSION.id}/`));
 });
 
+it.each([
+  ['Delete', 'Delete Session', 'Delete', 'Deleting…', 'Cancel', 'delete'],
+  ['Cancel', 'Cancel Session', 'Cancel session', 'Cancelling…', 'Keep scheduled', 'post'],
+] as const)('locks the %s confirmation until the calendar has refreshed', async (action, title, confirm, pending, dismiss, method) => {
+  state.calendarSessions = [FUTURE_SESSION];
+  let finishRequest: (value: unknown) => void = () => {};
+  http[method].mockImplementation(() => new Promise((resolve) => { finishRequest = resolve; }));
+  renderCalendar('');
+
+  fireEvent.click(await screen.findByTitle(FUTURE_SESSION.title));
+  fireEvent.click(await screen.findByRole('button', { name: action }));
+  const dialog = await screen.findByRole('dialog', { name: title });
+  fireEvent.click(within(dialog).getByRole('button', { name: confirm }));
+
+  expect(await within(dialog).findByRole('button', { name: pending })).toBeDisabled();
+  expect(within(dialog).getByRole('button', { name: dismiss })).toBeDisabled();
+  expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
+  finishRequest({ data: {} });
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: title })).not.toBeInTheDocument());
+});
+
 // ─── Backend 403 ─────────────────────────────────────────────────────────────
 
 it('shows an error Alert, not a spinner, when calendar-sessions returns 403', async () => {

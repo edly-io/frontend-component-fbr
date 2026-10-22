@@ -383,12 +383,13 @@ const ScheduleMeetingModal = ({
       isOpen={isOpen}
       onClose={handleClose}
       title={getModalTitle(session, isPastSession, descriptionOnly)}
-      hasCloseButton
+      isBlocking={isSaving}
+      hasCloseButton={!isSaving}
       isFullscreenOnMobile
       isOverflowVisible={false}
       footerNode={(
         <>
-          <Button variant="tertiary" onClick={handleClose}>
+          <Button variant="tertiary" onClick={handleClose} disabled={isSaving}>
             Cancel
           </Button>
           <Button variant="primary" onClick={handleSubmit} disabled={isSaving} className="ml-2">
@@ -402,7 +403,8 @@ const ScheduleMeetingModal = ({
         </>
       )}
     >
-      <div>
+      {/* A disabled fieldset locks every field while the save runs. */}
+      <fieldset disabled={isSaving}>
         {error && (
           <Alert variant="danger" dismissible onClose={dismissError} ref={errorRef}>
             {error}
@@ -577,7 +579,7 @@ const ScheduleMeetingModal = ({
             />
           )}
         </Form>
-      </div>
+      </fieldset>
     </StandardModal>
   );
 };

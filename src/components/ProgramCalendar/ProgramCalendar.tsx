@@ -224,6 +224,8 @@ const ProgramCalendarPage = ({ programKey }: { programKey: string }) => {
           title="Delete Session"
           dismissLabel="Cancel"
           confirmLabel="Delete"
+          pendingLabel="Deleting…"
+          isPending={deleteSession.isPending}
           confirmVariant="danger"
           error={deleteError}
           onConfirm={confirmWith(deleteSession.mutateAsync, 'Session deleted successfully!', setDeleteError, 'Failed to delete session')}
@@ -240,6 +242,8 @@ const ProgramCalendarPage = ({ programKey }: { programKey: string }) => {
           title="Cancel Session"
           dismissLabel="Keep scheduled"
           confirmLabel="Cancel session"
+          pendingLabel="Cancelling…"
+          isPending={cancelSession.isPending}
           confirmVariant="warning"
           error={cancelError}
           onConfirm={confirmWith(cancelSession.mutateAsync, 'Session cancelled.', setCancelError, 'Failed to cancel session')}

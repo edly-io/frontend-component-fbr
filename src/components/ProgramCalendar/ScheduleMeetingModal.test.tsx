@@ -161,6 +161,27 @@ describe('create mode — non-recurring', () => {
   });
 });
 
+describe('while saving', () => {
+  it('locks the modal until the save finishes', async () => {
+    const onClose = jest.fn();
+    let finishSave: (value: { id: number }) => void = () => {};
+    mockedCreateSession.mockImplementation(() => new Promise((resolve) => { finishSave = resolve; }));
+    wrap({ onClose });
+    await fillRequiredFields();
+    submitCreate();
+
+    expect(await screen.findByRole('button', { name: 'Creating...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g., Week 5 Live Session')).toBeDisabled();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    finishSave({ id: 1 });
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toBeEnabled();
+  });
+});
+
 // ─── Create: recurring ────────────────────────────────────────────────────────
 
 describe('create mode — recurring', () => {
