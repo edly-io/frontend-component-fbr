@@ -13,7 +13,8 @@
   cursor: help;
 }
 
-.fbr-scope-badge__icon {
+// Scoped under the root: the icon also carries Paragon's `.pgn__icon` (24px).
+.fbr-scope-badge .fbr-scope-badge__icon {
   width: 14px;
   height: 14px;
   color: #6C757D;

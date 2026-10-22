@@ -4,7 +4,8 @@
 // the recurrence "Ends" rules from fbr-home calendar.scss.
 
 .fbr-schedule-meeting__hint,
-.fbr-schedule-meeting__warning {
+// Qualified with `.alert`: the element is a Paragon Alert, whose theme CSS loads later.
+.alert.fbr-schedule-meeting__warning {
   font-size: 13px;
 }
 
