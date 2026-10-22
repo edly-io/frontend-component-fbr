@@ -14,8 +14,10 @@ export function renderWithProviders(
   ui: React.ReactElement,
   { route = '/', path }: RenderOptions = {},
 ): RenderResult & { queryClient: QueryClient } {
+  // Library queries set their own `retry` rule (no retry on 403/404), which
+  // overrides `retry: false` here; a zero delay keeps their other retries instant.
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 }, mutations: { retry: false } },
   });
   const content = path ? <Routes><Route path={path} element={ui} /></Routes> : ui;
   const result = render(

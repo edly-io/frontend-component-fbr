@@ -1,7 +1,7 @@
 import {
   keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient,
 } from '@tanstack/react-query';
-import { fbrKeys, STALE_TIME_MS } from '../queryDefaults';
+import { fbrKeys, FBR_QUERY_OPTIONS } from '../queryDefaults';
 import { ApiRecord } from '../types';
 import {
   cancelSession, correctSession, createSession, deleteSession, getCalendarSessions,
@@ -9,10 +9,15 @@ import {
 } from './api';
 import { SessionApprovedLeavesParams, SessionListParams, UpdateSessionVariables } from './types';
 
-/** Refresh everything a session change can affect: calendar windows, session details, audit history. */
+/**
+ * Refresh everything a session change can affect: calendar windows, session details,
+ * session lists (request details), the sessions-with-leaves panel and audit history.
+ */
 const invalidateSessionData = (queryClient: QueryClient) => Promise.all([
   queryClient.invalidateQueries({ queryKey: fbrKeys.calendarSessions }),
   queryClient.invalidateQueries({ queryKey: fbrKeys.sessions }),
+  queryClient.invalidateQueries({ queryKey: fbrKeys.sessionLists }),
+  queryClient.invalidateQueries({ queryKey: fbrKeys.sessionApprovedLeavesLists }),
   queryClient.invalidateQueries({ queryKey: fbrKeys.auditLogs }),
 ]);
 
@@ -24,7 +29,7 @@ export const useCalendarSessions = (
 ) => useQuery({
   queryKey: fbrKeys.calendarSessionsWindow(programKey, startDate, endDate),
   queryFn: () => getCalendarSessions(startDate, endDate, programKey),
-  staleTime: STALE_TIME_MS,
+  ...FBR_QUERY_OPTIONS,
   // Keep the previous window on screen (dimmed) while the next one loads.
   placeholderData: keepPreviousData,
   enabled: enabled && Boolean(programKey && startDate && endDate),
@@ -33,28 +38,28 @@ export const useCalendarSessions = (
 export const useSession = (sessionId: number | string | null | undefined) => useQuery({
   queryKey: fbrKeys.session(sessionId ?? ''),
   queryFn: () => getSession(sessionId as number | string),
-  staleTime: STALE_TIME_MS,
+  ...FBR_QUERY_OPTIONS,
   enabled: sessionId !== null && sessionId !== undefined && sessionId !== '',
 });
 
 export const useProgramDates = (programKey: string) => useQuery({
   queryKey: fbrKeys.programDates(programKey),
   queryFn: () => getProgramDates(programKey),
-  staleTime: STALE_TIME_MS,
+  ...FBR_QUERY_OPTIONS,
   enabled: Boolean(programKey),
 });
 
 export const useSessions = (params: SessionListParams, enabled = true) => useQuery({
   queryKey: fbrKeys.sessionList(params),
   queryFn: () => getSessions(params),
-  staleTime: STALE_TIME_MS,
+  ...FBR_QUERY_OPTIONS,
   enabled,
 });
 
 export const useSessionApprovedLeaves = (params: SessionApprovedLeavesParams, enabled = true) => useQuery({
   queryKey: fbrKeys.sessionApprovedLeaves(params),
   queryFn: () => getSessionApprovedLeaves(params),
-  staleTime: STALE_TIME_MS,
+  ...FBR_QUERY_OPTIONS,
   // Keep the current page on screen while the next page or search loads.
   placeholderData: keepPreviousData,
   enabled,
