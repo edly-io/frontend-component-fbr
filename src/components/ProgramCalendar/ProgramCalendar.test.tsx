@@ -186,9 +186,9 @@ it('removes a session an admin deletes from the calendar without a reload', asyn
 });
 
 it.each([
-  ['Delete', 'Delete Session', 'Delete', 'Deleting…', 'delete'],
-  ['Cancel', 'Cancel Session', 'Cancel session', 'Cancelling…', 'post'],
-] as const)('shows progress on the %s confirm button until the calendar has refreshed', async (action, title, confirm, pending, method) => {
+  ['Delete', 'Delete Session', 'Delete', 'Deleting…', 'Cancel', 'delete'],
+  ['Cancel', 'Cancel Session', 'Cancel session', 'Cancelling…', 'Keep scheduled', 'post'],
+] as const)('locks the %s confirmation until the calendar has refreshed', async (action, title, confirm, pending, dismiss, method) => {
   state.calendarSessions = [FUTURE_SESSION];
   let finishRequest: (value: unknown) => void = () => {};
   http[method].mockImplementation(() => new Promise((resolve) => { finishRequest = resolve; }));
@@ -200,6 +200,10 @@ it.each([
   fireEvent.click(within(dialog).getByRole('button', { name: confirm }));
 
   expect(await within(dialog).findByRole('button', { name: pending })).toBeDisabled();
+  expect(within(dialog).getByRole('button', { name: dismiss })).toBeDisabled();
+  expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.getByRole('dialog', { name: title })).toBeInTheDocument();
   finishRequest({ data: {} });
   await waitFor(() => expect(screen.queryByRole('dialog', { name: title })).not.toBeInTheDocument());
 });

@@ -16,7 +16,7 @@ interface SessionConfirmModalProps {
   children: React.ReactNode;
 }
 
-/** The admin's Delete / Cancel session confirmation. */
+/** The admin's Delete / Cancel session confirmation. Locked while the request runs. */
 const SessionConfirmModal = ({
   title, dismissLabel, confirmLabel, pendingLabel, isPending, confirmVariant, error, onConfirm, onDismiss, children,
 }: SessionConfirmModalProps) => (
@@ -24,9 +24,11 @@ const SessionConfirmModal = ({
     isOpen
     onClose={onDismiss}
     title={title}
+    isBlocking={isPending}
+    hasCloseButton={!isPending}
     footerNode={(
       <>
-        <Button variant="tertiary" onClick={onDismiss}>{dismissLabel}</Button>
+        <Button variant="tertiary" onClick={onDismiss} disabled={isPending}>{dismissLabel}</Button>
         <Button variant={confirmVariant} onClick={onConfirm} disabled={isPending} className="ml-2">
           {isPending ? (
             <>
