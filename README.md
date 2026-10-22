@@ -304,6 +304,26 @@ loop, and works inside Tutor once mounted correctly), but validate with an
 If you use `file:` or `npm link` and hit duplicate-React errors, see
 [Troubleshooting](#troubleshooting).
 
+## Releasing (GitHub tags)
+
+FBR apps install this library from GitHub and pin an exact release tag in
+`package.json`, e.g. `"@edly-io/frontend-component-fbr": "github:edly-io/frontend-component-fbr#v2.0.0"`.
+A release is:
+
+1. **In the feature PR, bump the version** following semver, without creating a tag:
+   `npm version <major|minor|patch> --no-git-tag-version`. Use a major bump when
+   apps must change something to upgrade, for example a new or narrower peer dependency.
+2. **Merge the PR to `master`.**
+3. **Tag the merge commit and push the tag:**
+   `git checkout master && git pull && git tag v<version> && git push origin v<version>`.
+   Optionally create a GitHub Release from the tag with a short changelog.
+4. **In each app, pin the new tag** (`npm install github:edly-io/frontend-component-fbr#v<version>`)
+   in its own PR.
+
+Always bump the version for a release. webpack (dev server and builds) treats a
+package in `node_modules` as unchanged while its version is unchanged, so a new
+build under the same version can be served stale.
+
 ## Publishing
 
 1. **Bump the version** following semver:
