@@ -55,7 +55,9 @@ export const fbrKeys = {
   holidayList: (params: object) => ['fbr', 'holidays', params] as const,
   locations: ['fbr', 'locations'] as const,
   locationList: (params: object) => ['fbr', 'locations', params] as const,
-  approvedLeaves: (programKey?: string) => ['fbr', 'approvedLeaves', programKey ?? null] as const,
+  approvedLeaves: (programKey?: string, leaveDate?: string) => (
+    ['fbr', 'approvedLeaves', programKey ?? null, leaveDate ?? null] as const
+  ),
   leaveUsage: (params: object) => ['fbr', 'leaveUsage', params] as const,
   auditLogs: ['fbr', 'auditLogs'] as const,
   auditLogList: (params: object) => ['fbr', 'auditLogs', 'list', params] as const,

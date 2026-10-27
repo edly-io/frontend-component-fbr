@@ -20,6 +20,8 @@ interface ScheduleMeetingOptionsParams {
   programKey: string;
   descriptionOnly: boolean;
   isPastSession: boolean;
+  /** YYYY-MM-DD; the leave lookup asks only for leaves covering this day. */
+  startDate: string;
   /** Scopes the instructor list; null lists every instructor in the program's city. */
   instructorsCourseId: string | null;
   /** False while a lecture still has no course picked: there is nothing to list yet. */
@@ -48,16 +50,17 @@ const toLocationOption = (location: ApiRecord): SelectOption => ({
  * no options even when an earlier lookup with the same key is cached.
  */
 const useScheduleMeetingOptions = ({
-  isOpen, programKey, descriptionOnly, isPastSession, instructorsCourseId, canListInstructors,
+  isOpen, programKey, descriptionOnly, isPastSession, startDate, instructorsCourseId, canListInstructors,
 }: ScheduleMeetingOptionsParams) => {
   const coursesEnabled = isOpen && !descriptionOnly && Boolean(programKey);
   const instructorsEnabled = isOpen && !descriptionOnly && Boolean(programKey) && canListInstructors;
-  const leavesEnabled = isOpen && Boolean(programKey) && !descriptionOnly && !isPastSession;
+  const leavesEnabled = isOpen && Boolean(programKey) && Boolean(startDate) && !descriptionOnly && !isPastSession;
 
   const courses = useProgramCourses(programKey, coursesEnabled);
   const instructors = useProgramInstructors(programKey, instructorsCourseId, instructorsEnabled);
   const locations = useLocations({ pageSize: LOCATIONS_PAGE_SIZE, programKey }, isOpen);
-  const leaves = useApprovedLeaves({ program_key: programKey }, leavesEnabled);
+  // Filtered by date: the unfiltered list is capped and drops older leaves (#531).
+  const leaves = useApprovedLeaves({ program_key: programKey, leave_date: startDate }, leavesEnabled);
   const config = useConfig();
 
   const courseRunOptions = useMemo(
@@ -81,6 +84,7 @@ const useScheduleMeetingOptions = ({
     locationOptions,
     locationsLoading: locations.isLoading,
     approvedLeaves: (leavesEnabled && leaves.data) || NO_LEAVES,
+    leavesLoading: leavesEnabled && leaves.isLoading,
     sessionTypeOptions: (config.data?.session_types as SessionTypeOption[] | undefined) || [],
     lectureDurations: (config.data?.lecture_duration_choices_minutes as number[] | undefined) || null,
   };

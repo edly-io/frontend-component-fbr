@@ -44,6 +44,22 @@ describe('getApprovedLeaves', () => {
     );
   });
 
+  it('sends leave_date when given, so only leaves covering that day come back', async () => {
+    mockClient.get.mockResolvedValue({ data: { results: [] } });
+    await getApprovedLeaves({ program_key: 'prog1', leave_date: '2026-11-10' });
+    expect(mockClient.get).toHaveBeenCalledWith(
+      expect.stringContaining('leave_date=2026-11-10'),
+    );
+  });
+
+  it('omits leave_date when not given', async () => {
+    mockClient.get.mockResolvedValue({ data: { results: [] } });
+    await getApprovedLeaves({ program_key: 'prog1' });
+    expect(mockClient.get).toHaveBeenCalledWith(
+      expect.not.stringContaining('leave_date'),
+    );
+  });
+
   it('returns results array from paginated response', async () => {
     mockClient.get.mockResolvedValue({ data: { results: [{ id: 1 }] } });
     const result = await getApprovedLeaves({});
