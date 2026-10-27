@@ -214,7 +214,6 @@ const ProgramCalendarPage = ({ programKey }: { programKey: string }) => {
           programInfo={data.programInfo}
           session={scheduleSession}
           onSuccess={handleSessionSuccess}
-          holidays={data.holidays}
           descriptionOnly={role.isInstructor && !role.canManageSessions}
         />
       )}

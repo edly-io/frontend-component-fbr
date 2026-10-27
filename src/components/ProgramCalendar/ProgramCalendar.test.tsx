@@ -271,3 +271,43 @@ it('does not grey out an admin\'s sessions when leaves load before /config/ reso
   // The overlay waits for the real role, so an admin never requests leaves at all.
   expect(http.get.mock.calls.some(([url]) => url.includes('/requests/leave/'))).toBe(false);
 });
+
+// ─── Holidays past the page-size cap (#532) ─────────────────────────────────
+
+// 101 holidays in the year 2000 sort before every real one.
+const OLD_HOLIDAYS = Array.from({ length: 101 }, (_, i) => {
+  const day = new Date(Date.UTC(2000, 0, 1 + i)).toISOString().slice(0, 10);
+  return {
+    id: 1000 + i, name: `PROBE ${i}`, start_date: day, end_date: day,
+  };
+});
+const CURRENT_HOLIDAYS = [
+  {
+    id: 1, name: 'Diwali', start_date: '2026-10-20', end_date: '2026-10-20',
+  },
+  {
+    id: 2, name: 'Iqbal Day', start_date: '2026-11-09', end_date: '2026-11-09',
+  },
+];
+
+// Mimics the API: an optional overlap filter, oldest first, at most 100 per page.
+const holidaysResponse = (url: string) => {
+  const params = new URL(url).searchParams;
+  const from = params.get('date_from') ?? '0000-01-01';
+  const to = params.get('date_to') ?? '9999-12-31';
+  const matching = [...OLD_HOLIDAYS, ...CURRENT_HOLIDAYS]
+    .filter((h) => h.end_date >= from && h.start_date <= to);
+  return Promise.resolve({ data: { count: matching.length, results: matching.slice(0, 100) } });
+};
+
+it('marks holidays in the visible month however many holidays exist', async () => {
+  http.get.mockImplementation((url: string) => (
+    url.includes('/public-holidays/') ? holidaysResponse(url) : routeGet(url)
+  ));
+
+  renderCalendar('');
+
+  expect(await screen.findByText('Diwali')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByText('Iqbal Day')).toBeInTheDocument();
+});

@@ -161,7 +161,6 @@ export interface ScheduleMeetingModalProps {
   onSuccess: (session: Session) => void;
   /** Omit to create; pass to edit (or correct, once the session has ended). */
   session?: ScheduleSession | null;
-  holidays?: CalendarHoliday[];
   /** Instructor mode: only the description is editable. */
   descriptionOnly?: boolean;
 }

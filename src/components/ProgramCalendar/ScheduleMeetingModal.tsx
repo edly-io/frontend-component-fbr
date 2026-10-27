@@ -126,7 +126,7 @@ const ZoomHelpText = ({ session }: { session: ScheduleSession | null }) => (
 );
 
 const ScheduleMeetingModal = ({
-  isOpen, onClose, programKey = '', programInfo = null, onSuccess, session = null, holidays = [],
+  isOpen, onClose, programKey = '', programInfo = null, onSuccess, session = null,
   descriptionOnly = false,
 }: ScheduleMeetingModalProps) => {
   const isPastSession = isSessionPast(session);
@@ -166,7 +166,7 @@ const ScheduleMeetingModal = ({
   // scoped to the picked course; a lecture lists nobody until a course is picked.
   const {
     courseRunOptions, courseRunsLoading, instructorOptions, instructorsLoading, locationOptions,
-    locationsLoading, approvedLeaves, leavesLoading, sessionTypeOptions, lectureDurations,
+    locationsLoading, approvedLeaves, leavesLoading, holidays, sessionTypeOptions, lectureDurations,
   } = useScheduleMeetingOptions({
     isOpen,
     programKey,

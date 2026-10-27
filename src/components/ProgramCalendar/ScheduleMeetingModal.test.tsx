@@ -6,6 +6,7 @@ import { fetchProgramCourses, fetchProgramInstructors } from '../../data/program
 import { getSessionsConfig } from '../../data/config/api';
 import { getLocations } from '../../data/locations/api';
 import { getApprovedLeaves } from '../../data/requests/api';
+import { getHolidays } from '../../data/holidays/api';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ScheduleMeetingModalProps, ScheduleSession } from './types';
 
@@ -14,6 +15,7 @@ jest.mock('../../data/programs/api');
 jest.mock('../../data/config/api');
 jest.mock('../../data/locations/api');
 jest.mock('../../data/requests/api');
+jest.mock('../../data/holidays/api');
 
 const mockedCreateSession = jest.mocked(createSession);
 const mockedUpdateSession = jest.mocked(updateSession);
@@ -23,6 +25,7 @@ const mockedFetchProgramInstructors = jest.mocked(fetchProgramInstructors);
 const mockedGetSessionsConfig = jest.mocked(getSessionsConfig);
 const mockedGetLocations = jest.mocked(getLocations);
 const mockedGetApprovedLeaves = jest.mocked(getApprovedLeaves);
+const mockedGetHolidays = jest.mocked(getHolidays);
 
 // jsdom has no layout, so the modal's scroll-into-view calls would throw.
 Element.prototype.scrollIntoView = jest.fn();
@@ -40,7 +43,6 @@ const wrap = (props: Partial<ScheduleMeetingModalProps> = {}) => renderWithProvi
     onSuccess={jest.fn()}
     programKey="prog-1"
     session={null}
-    holidays={[]}
     {...props}
   />,
 );
@@ -59,6 +61,7 @@ beforeEach(() => {
     lecture_duration_choices_minutes: [60, 90, 120],
   });
   mockedGetApprovedLeaves.mockResolvedValue([]);
+  mockedGetHolidays.mockResolvedValue({ count: 0, results: [] });
   mockedCreateSession.mockResolvedValue({ id: 1 });
   mockedUpdateSession.mockResolvedValue({ id: 1 });
   mockedCorrectSession.mockResolvedValue({ id: 1 });
@@ -708,13 +711,21 @@ describe('scheduling warnings', () => {
   });
 
   it('warns on a public holiday start date without blocking', async () => {
-    wrap({
-      holidays: [{
-        id: 1, name: 'Eid al-Fitr', start_date: MONDAY, end_date: MONDAY,
-      }],
-    });
+    // The API answers only for the date asked about, so the reminder works for
+    // any start date, not just the month on screen (#532).
+    mockedGetHolidays.mockImplementation(async ({ dateFrom, dateTo } = {}) => (
+      dateFrom === MONDAY && dateTo === MONDAY
+        ? {
+          count: 1,
+          results: [{
+            id: 1, name: 'Eid al-Fitr', start_date: MONDAY, end_date: MONDAY,
+          }],
+        }
+        : { count: 0, results: [] }
+    ));
+    wrap();
     await fillRequiredFields();
-    expect(screen.getByText(/Eid al-Fitr is a public holiday/)).toBeInTheDocument();
+    expect(await screen.findByText(/Eid al-Fitr is a public holiday/)).toBeInTheDocument();
     submitCreate();
     await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
   });

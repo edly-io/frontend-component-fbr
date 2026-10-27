@@ -5,10 +5,13 @@ import { useConfig } from '../../data/config/hooks';
 import { useLocations } from '../../data/locations/hooks';
 import { useProgramCourses, useProgramInstructors } from '../../data/programs/hooks';
 import { useApprovedLeaves } from '../../data/requests/hooks';
+import { useHolidays } from '../../data/holidays/hooks';
+import { CalendarHoliday } from './types';
 
 const LOCATIONS_PAGE_SIZE = 100;
 const NO_OPTIONS: SelectOption[] = [];
 const NO_LEAVES: ApiRecord[] = [];
+const NO_HOLIDAYS: CalendarHoliday[] = [];
 
 export interface SessionTypeOption {
   value: string;
@@ -55,12 +58,15 @@ const useScheduleMeetingOptions = ({
   const coursesEnabled = isOpen && !descriptionOnly && Boolean(programKey);
   const instructorsEnabled = isOpen && !descriptionOnly && Boolean(programKey) && canListInstructors;
   const leavesEnabled = isOpen && Boolean(programKey) && Boolean(startDate) && !descriptionOnly && !isPastSession;
+  const holidaysEnabled = isOpen && Boolean(startDate) && !isPastSession;
 
   const courses = useProgramCourses(programKey, coursesEnabled);
   const instructors = useProgramInstructors(programKey, instructorsCourseId, instructorsEnabled);
   const locations = useLocations({ pageSize: LOCATIONS_PAGE_SIZE, programKey }, isOpen);
   // Filtered by date: the unfiltered list is capped and drops older leaves (#531).
   const leaves = useApprovedLeaves({ program_key: programKey, leave_date: startDate }, leavesEnabled);
+  // The start date's own holidays: it can be outside the month on screen (#532).
+  const holidays = useHolidays({ dateFrom: startDate, dateTo: startDate }, holidaysEnabled);
   const config = useConfig();
 
   const courseRunOptions = useMemo(
@@ -85,6 +91,7 @@ const useScheduleMeetingOptions = ({
     locationsLoading: locations.isLoading,
     approvedLeaves: (leavesEnabled && leaves.data) || NO_LEAVES,
     leavesLoading: leavesEnabled && leaves.isLoading,
+    holidays: (holidaysEnabled && (holidays.data?.results as CalendarHoliday[] | undefined)) || NO_HOLIDAYS,
     sessionTypeOptions: (config.data?.session_types as SessionTypeOption[] | undefined) || [],
     lectureDurations: (config.data?.lecture_duration_choices_minutes as number[] | undefined) || null,
   };
