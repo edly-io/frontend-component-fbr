@@ -6,10 +6,6 @@ import {
   SessionListParams,
 } from './types';
 
-const listFrom = <T>(data: T[] | { results?: T[] }): T[] => (
-  Array.isArray(data) ? data : (data.results ?? [])
-);
-
 export const getSession = async (sessionId: number | string): Promise<Session> => {
   const { data } = await getAuthenticatedHttpClient().get(getAttendanceApiUrl(`sessions/${sessionId}/`));
   return data;
@@ -110,14 +106,17 @@ export const getCalendarSessions = async (
   return { sessions: data.results, userRole: data.user_role };
 };
 
-/** Sessions in a date range, scoped to the caller's role (used by the leave panels). */
+/** One page of sessions in a date range, scoped to the caller's role (used by the leave panels). */
 export const getSessions = async (
-  { program_key, start_date, end_date }: SessionListParams = {},
-): Promise<Session[]> => {
+  {
+    program_key, start_date, end_date, page,
+  }: SessionListParams = {},
+): Promise<PaginatedList<Session>> => {
   const params = new URLSearchParams({ start_date: start_date ?? '', end_date: end_date ?? '' });
   if (program_key) { params.set('program_key', program_key); }
+  if (page) { params.set('page', String(page)); }
   const { data } = await getAuthenticatedHttpClient().get(getAttendanceApiUrl(`sessions/?${params}`));
-  return listFrom<Session>(data);
+  return { count: data.count ?? 0, results: data.results ?? [] };
 };
 
 /** Sessions with their approved-leave attendees, server-side paginated. */

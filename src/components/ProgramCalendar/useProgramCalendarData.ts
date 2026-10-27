@@ -15,8 +15,9 @@ import {
   ApprovedLeave, CalendarHoliday, CalendarSession, CalendarViewerRole, ProgramInfo,
 } from './types';
 
-// page_size=100 covers any realistic set of holidays.
-const HOLIDAYS_PARAMS = { pageSize: 100 };
+// Holidays never overlap, so the visible window (at most 6 weeks) holds far
+// fewer than the API's maximum page of 100.
+const HOLIDAYS_PAGE_SIZE = 100;
 const SESSIONS_LOAD_ERROR = 'Failed to load sessions. Please try again later.';
 
 // Stable empty lists, so memoised maps don't rebuild while data is loading.
@@ -47,7 +48,13 @@ const useProgramCalendarData = (programKey: string, start: Date, end: Date) => {
   // Stringify the window in local time. toISOString() would convert to UTC
   // first and shift the whole window back a day in +offset timezones (PKT).
   const sessionsQuery = useCalendarSessions(programKey, toLocalDateStr(start), toLocalDateStr(end));
-  const holidaysQuery = useHolidays(HOLIDAYS_PARAMS);
+  // Only the holidays on screen: an unfiltered list is capped, oldest first,
+  // and drops the current ones (#532). `end` is exclusive; date_to is inclusive.
+  const holidaysQuery = useHolidays({
+    pageSize: HOLIDAYS_PAGE_SIZE,
+    dateFrom: toLocalDateStr(start),
+    dateTo: toLocalDateStr(new Date(end.getTime() - 1)),
+  });
   const programDatesQuery = useProgramDates(programKey);
   const programQuery = useProgram(programKey);
   // Leave overlays are for learners and instructors only. Wait for the real role:

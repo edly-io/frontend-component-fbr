@@ -42,6 +42,22 @@ describe('getHolidays', () => {
     expect(url).toContain('search=eid');
   });
 
+  it('includes the date range when provided', async () => {
+    mockClient.get.mockResolvedValue({ data: { count: 0, results: [] } });
+    await getHolidays({ dateFrom: '2026-02-01', dateTo: '2026-02-28' });
+    const [url] = mockClient.get.mock.calls[0];
+    expect(url).toContain('date_from=2026-02-01');
+    expect(url).toContain('date_to=2026-02-28');
+  });
+
+  it('omits the date range when not provided', async () => {
+    mockClient.get.mockResolvedValue({ data: { count: 0, results: [] } });
+    await getHolidays();
+    const [url] = mockClient.get.mock.calls[0];
+    expect(url).not.toContain('date_from');
+    expect(url).not.toContain('date_to');
+  });
+
   it('returns count and results', async () => {
     mockClient.get.mockResolvedValue({ data: { count: 1, results: [{ id: 1 }] } });
     const result = await getHolidays();

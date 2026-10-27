@@ -164,25 +164,30 @@ describe('getProgramDates', () => {
 
 describe('getSessions', () => {
   it('GETs the sessions endpoint with start_date, end_date, and program_key', async () => {
-    mockClient.get.mockResolvedValue({ data: { results: [{ id: 'sess1' }] } });
-    const result = await getSessions({
+    mockClient.get.mockResolvedValue({ data: { count: 1, results: [{ id: 'sess1' }] } });
+    await getSessions({
       program_key: 'prog1',
       start_date: '2026-01-01',
       end_date: '2026-12-31',
     });
-    expect(mockClient.get).toHaveBeenCalledWith(
-      expect.stringContaining('/sessions/'),
-    );
-    expect(mockClient.get).toHaveBeenCalledWith(
-      expect.stringContaining('program_key=prog1'),
-    );
-    expect(result).toEqual([{ id: 'sess1' }]);
+    const url = new URL(mockClient.get.mock.calls[0][0]);
+    expect(url.pathname).toContain('/sessions/');
+    expect(url.searchParams.get('program_key')).toBe('prog1');
+    expect(url.searchParams.get('start_date')).toBe('2026-01-01');
+    expect(url.searchParams.get('end_date')).toBe('2026-12-31');
   });
 
-  it('handles a flat array response', async () => {
-    mockClient.get.mockResolvedValue({ data: [{ id: 'sess2' }] });
+  // The list is paginated: keeping the total lets callers load the rest (#534).
+  it('returns one page with the total count', async () => {
+    mockClient.get.mockResolvedValue({ data: { count: 51, next: 'http://x/?page=2', results: [{ id: 'sess1' }] } });
     const result = await getSessions({ start_date: '2026-01-01', end_date: '2026-12-31' });
-    expect(result).toEqual([{ id: 'sess2' }]);
+    expect(result).toEqual({ count: 51, results: [{ id: 'sess1' }] });
+  });
+
+  it('asks for the given page', async () => {
+    mockClient.get.mockResolvedValue({ data: { count: 51, results: [] } });
+    await getSessions({ start_date: '2026-01-01', end_date: '2026-12-31', page: 2 });
+    expect(new URL(mockClient.get.mock.calls[0][0]).searchParams.get('page')).toBe('2');
   });
 });
 

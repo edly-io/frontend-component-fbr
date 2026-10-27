@@ -7,6 +7,8 @@ const APPROVED_LEAVES_PAGE_SIZE = '200';
 
 export interface ApprovedLeavesParams {
   program_key?: string;
+  /** YYYY-MM-DD: only leaves whose date range covers this day. */
+  leave_date?: string;
 }
 
 export interface LeaveUsageParams {
@@ -16,9 +18,12 @@ export interface LeaveUsageParams {
 }
 
 /** Approved leave requests visible to the caller (the calendar's leave overlay). */
-export const getApprovedLeaves = async ({ program_key }: ApprovedLeavesParams = {}): Promise<ApiRecord[]> => {
+export const getApprovedLeaves = async (
+  { program_key, leave_date }: ApprovedLeavesParams = {},
+): Promise<ApiRecord[]> => {
   const params = new URLSearchParams({ state: APPROVED_STATE, page_size: APPROVED_LEAVES_PAGE_SIZE });
   if (program_key) { params.set('program_key', program_key); }
+  if (leave_date) { params.set('leave_date', leave_date); }
   const { data } = await getAuthenticatedHttpClient().get(getAttendanceApiUrl(`requests/leave/?${params.toString()}`));
   return Array.isArray(data) ? data : data.results ?? [];
 };

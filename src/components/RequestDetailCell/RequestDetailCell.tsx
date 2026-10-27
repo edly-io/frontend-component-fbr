@@ -110,26 +110,72 @@ const SessionList = ({ sessions }: { sessions: RequestSession[] }) => (
 
 const NoSessions = ({ children }: { children: ReactNode }) => <span className="text-muted">{children}</span>;
 
-/** Sessions in a full-day leave period, looked up from the program's schedule. */
+const SessionsLabel = ({ total = 0 }: { total?: number }) => (
+  <div className="small text-muted">{total > 0 ? `Sessions (${total})` : 'Sessions'}</div>
+);
+
+interface ShowMoreSessionsProps {
+  remaining: number;
+  isLoading: boolean;
+  onClick: () => void;
+}
+
+const ShowMoreSessions = ({ remaining, isLoading, onClick }: ShowMoreSessionsProps) => (
+  <Button variant="link" size="sm" className="p-0" onClick={onClick} disabled={isLoading}>
+    {isLoading
+      ? <Spinner animation="border" size="sm" screenReaderText="Loading more sessions" />
+      : `Show more (${remaining} remaining)`}
+  </Button>
+);
+
+/**
+ * Sessions in a full-day leave period, looked up from the program's schedule a page
+ * at a time, with the total and a "Show more" for the rest.
+ */
 const FullDaySessions = ({ req, programKey }: RequestSummaryProps) => {
   const lookupEnabled = Boolean(programKey && req.leave_start_date && req.leave_end_date);
-  const { data: periodSessions = [], isLoading, isFetched } = useSessions({
+  const {
+    data, isLoading, isFetched, hasNextPage, fetchNextPage, isFetchingNextPage,
+  } = useSessions({
     program_key: programKey,
     start_date: req.leave_start_date,
     end_date: req.leave_end_date,
   }, lookupEnabled);
 
-  const display = periodSessions.length > 0 ? periodSessions : (req.sessions || []);
+  const periodSessions = data?.pages.flatMap((page) => page.results) ?? [];
+  const hasPeriodSessions = periodSessions.length > 0;
+  const display = hasPeriodSessions ? periodSessions : (req.sessions || []);
+  const total = hasPeriodSessions ? (data?.pages[0].count ?? 0) : display.length;
+  const showEmpty = isFetched || !programKey;
+
+  let body: ReactNode = null;
   if (isLoading) {
-    return <Spinner animation="border" size="sm" screenReaderText="Loading sessions" />;
+    body = <Spinner animation="border" size="sm" screenReaderText="Loading sessions" />;
+  } else if (display.length > 0) {
+    body = <SessionList sessions={display} />;
+  } else if (showEmpty) {
+    body = <NoSessions>No sessions scheduled in this period</NoSessions>;
   }
-  if (display.length > 0) { return <SessionList sessions={display} />; }
-  if (isFetched || !programKey) { return <NoSessions>No sessions scheduled in this period</NoSessions>; }
-  return null;
+  return (
+    <>
+      <SessionsLabel total={isLoading ? 0 : total} />
+      {body}
+      {hasNextPage && (
+        <ShowMoreSessions
+          remaining={total - display.length}
+          isLoading={isFetchingNextPage}
+          onClick={() => fetchNextPage()}
+        />
+      )}
+    </>
+  );
 };
 
 const LinkedSessions = ({ sessions }: { sessions: RequestSession[] }) => (
-  sessions.length > 0 ? <SessionList sessions={sessions} /> : <NoSessions>No sessions</NoSessions>
+  <>
+    <SessionsLabel />
+    {sessions.length > 0 ? <SessionList sessions={sessions} /> : <NoSessions>No sessions</NoSessions>}
+  </>
 );
 
 // Badges, date and sessions for one request. Shared by the Details modal and the
@@ -151,7 +197,6 @@ export const RequestSummary = ({ req, programKey = '' }: RequestSummaryProps) =>
           <div className="font-weight-bold">{dateRange}</div>
         </div>
       )}
-      <div className="small text-muted">Sessions</div>
       {isFullDay
         ? <FullDaySessions req={req} programKey={programKey} />
         : <LinkedSessions sessions={req.sessions || []} />}

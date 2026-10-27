@@ -6,6 +6,7 @@ import { fetchProgramCourses, fetchProgramInstructors } from '../../data/program
 import { getSessionsConfig } from '../../data/config/api';
 import { getLocations } from '../../data/locations/api';
 import { getApprovedLeaves } from '../../data/requests/api';
+import { getHolidays } from '../../data/holidays/api';
 import ScheduleMeetingModal from './ScheduleMeetingModal';
 import { ScheduleMeetingModalProps, ScheduleSession } from './types';
 
@@ -14,6 +15,7 @@ jest.mock('../../data/programs/api');
 jest.mock('../../data/config/api');
 jest.mock('../../data/locations/api');
 jest.mock('../../data/requests/api');
+jest.mock('../../data/holidays/api');
 
 const mockedCreateSession = jest.mocked(createSession);
 const mockedUpdateSession = jest.mocked(updateSession);
@@ -23,6 +25,7 @@ const mockedFetchProgramInstructors = jest.mocked(fetchProgramInstructors);
 const mockedGetSessionsConfig = jest.mocked(getSessionsConfig);
 const mockedGetLocations = jest.mocked(getLocations);
 const mockedGetApprovedLeaves = jest.mocked(getApprovedLeaves);
+const mockedGetHolidays = jest.mocked(getHolidays);
 
 // jsdom has no layout, so the modal's scroll-into-view calls would throw.
 Element.prototype.scrollIntoView = jest.fn();
@@ -40,7 +43,6 @@ const wrap = (props: Partial<ScheduleMeetingModalProps> = {}) => renderWithProvi
     onSuccess={jest.fn()}
     programKey="prog-1"
     session={null}
-    holidays={[]}
     {...props}
   />,
 );
@@ -59,6 +61,7 @@ beforeEach(() => {
     lecture_duration_choices_minutes: [60, 90, 120],
   });
   mockedGetApprovedLeaves.mockResolvedValue([]);
+  mockedGetHolidays.mockResolvedValue({ count: 0, results: [] });
   mockedCreateSession.mockResolvedValue({ id: 1 });
   mockedUpdateSession.mockResolvedValue({ id: 1 });
   mockedCorrectSession.mockResolvedValue({ id: 1 });
@@ -99,6 +102,11 @@ const selectFromSearchable = async (getInput: () => HTMLElement | null, optionLa
 const displayDate = (isoDate: string) => isoDate.split('-').reverse().join('/');
 const recurrenceEndDateInput = () => screen.getByLabelText('Recurrence end date');
 
+// Save stays disabled until the start date's leave lookup has answered.
+const waitForLeaveLookup = () => waitFor(
+  () => expect(screen.getByRole('button', { name: /^create session$/i })).toBeEnabled(),
+);
+
 const fillRequiredFields = async ({
   startDate = MONDAY, startTime = '10:00', endDate = startDate, endTime = '11:00',
 } = {}) => {
@@ -112,6 +120,7 @@ const fillRequiredFields = async ({
   fireEvent.change(screen.getByLabelText('Start time'), { target: { value: startTime } });
   fireEvent.change(screen.getByLabelText('End date'), { target: { value: displayDate(endDate) } });
   fireEvent.change(screen.getByLabelText('End time'), { target: { value: endTime } });
+  await waitForLeaveLookup();
 };
 
 const toggleRecurring = () => fireEvent.click(document.getElementById('recurring-meeting-toggle') as HTMLElement);
@@ -397,7 +406,7 @@ describe('duration policy by session type', () => {
 
   // A non-lecture type needs no course, instructor or location — only a title
   // and a time range.
-  const fillEventFields = ({ endDate = MONDAY, endTime }: { endDate?: string; endTime: string }) => {
+  const fillEventFields = async ({ endDate = MONDAY, endTime }: { endDate?: string; endTime: string }) => {
     fireEvent.change(screen.getByPlaceholderText('e.g., Week 5 Live Session'), {
       target: { name: 'title', value: 'Graduation Workshop' },
     });
@@ -405,12 +414,13 @@ describe('duration policy by session type', () => {
     fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '10:00' } });
     fireEvent.change(screen.getByLabelText('End date'), { target: { value: displayDate(endDate) } });
     fireEvent.change(screen.getByLabelText('End time'), { target: { value: endTime } });
+    await waitForLeaveLookup();
   };
 
   it('accepts an off-slot duration for a non-lecture type', async () => {
     wrap();
     await selectWorkshop();
-    fillEventFields({ endTime: '10:45' });
+    await fillEventFields({ endTime: '10:45' });
     submitCreate();
 
     await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
@@ -420,7 +430,7 @@ describe('duration policy by session type', () => {
   it('accepts a full-day duration for a non-lecture type', async () => {
     wrap();
     await selectWorkshop();
-    fillEventFields({ endTime: '19:00' });
+    await fillEventFields({ endTime: '19:00' });
     submitCreate();
 
     await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
@@ -432,7 +442,7 @@ describe('duration policy by session type', () => {
     threeDaysOn.setDate(threeDaysOn.getDate() + 3);
     wrap();
     await selectWorkshop();
-    fillEventFields({ endDate: threeDaysOn.toLocaleDateString('en-CA'), endTime: '17:00' });
+    await fillEventFields({ endDate: threeDaysOn.toLocaleDateString('en-CA'), endTime: '17:00' });
     submitCreate();
 
     await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
@@ -475,7 +485,7 @@ describe('duration policy by session type', () => {
     // The backend still validates; the form must not invent a limit of its own.
     mockedGetSessionsConfig.mockRejectedValue(new Error('boom'));
     wrap();
-    fillEventFields({ endTime: '10:45' });
+    await fillEventFields({ endTime: '10:45' });
     await selectFromSearchable(courseInput, COURSE.display_name);
     await selectFromSearchable(instructorInput, 'Alice Smith');
     await selectFromSearchable(locationInput, LOCATION.name);
@@ -701,13 +711,21 @@ describe('scheduling warnings', () => {
   });
 
   it('warns on a public holiday start date without blocking', async () => {
-    wrap({
-      holidays: [{
-        id: 1, name: 'Eid al-Fitr', start_date: MONDAY, end_date: MONDAY,
-      }],
-    });
+    // The API answers only for the date asked about, so the reminder works for
+    // any start date, not just the month on screen (#532).
+    mockedGetHolidays.mockImplementation(async ({ dateFrom, dateTo } = {}) => (
+      dateFrom === MONDAY && dateTo === MONDAY
+        ? {
+          count: 1,
+          results: [{
+            id: 1, name: 'Eid al-Fitr', start_date: MONDAY, end_date: MONDAY,
+          }],
+        }
+        : { count: 0, results: [] }
+    ));
+    wrap();
     await fillRequiredFields();
-    expect(screen.getByText(/Eid al-Fitr is a public holiday/)).toBeInTheDocument();
+    expect(await screen.findByText(/Eid al-Fitr is a public holiday/)).toBeInTheDocument();
     submitCreate();
     await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
   });
@@ -724,5 +742,66 @@ describe('scheduling warnings', () => {
 
     await waitFor(() => expect(mockedCreateSession).not.toHaveBeenCalled());
     expect(screen.getAllByText(/is on approved leave on this date/).length).toBeGreaterThan(0);
+  });
+});
+
+// ─── Leave lookup by session date ─────────────────────────────────────────────
+
+describe('instructor leave lookup', () => {
+  const WEDNESDAY = futureDateOn(3);
+
+  // Like the backend once a program has over 200 approved leaves: the leave is
+  // missing from the unfiltered first page and only found by asking for its date.
+  const serveLeaveOnlyWhenAskedFor = (leaveDate: string) => {
+    mockedGetApprovedLeaves.mockImplementation(async ({ leave_date } = {}) => (
+      leave_date === leaveDate
+        ? [{ submitter_email: INSTRUCTOR.email, leave_start_date: leaveDate, leave_end_date: leaveDate }]
+        : []
+    ));
+  };
+
+  it('blocks creating a session on a date the instructor is on leave', async () => {
+    serveLeaveOnlyWhenAskedFor(MONDAY);
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    expect((await screen.findAllByText(/is on approved leave on this date/)).length).toBeGreaterThan(0);
+    expect(mockedCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('blocks moving an existing session onto a date the instructor is on leave', async () => {
+    serveLeaveOnlyWhenAskedFor(WEDNESDAY);
+    wrap({
+      session: {
+        id: 9,
+        title: 'Week 5 Live Session',
+        session_type: 'session',
+        course_id: COURSE.course_key,
+        instructor_emails: [INSTRUCTOR.email],
+        location: { id: LOCATION.id, name: LOCATION.name },
+        scheduled_start_time: new Date(`${MONDAY}T10:00`).toISOString(),
+        scheduled_end_time: new Date(`${MONDAY}T11:00`).toISOString(),
+        is_recurring: false,
+        recurrence: {},
+      },
+    });
+    await screen.findByText('Alice Smith');
+    fireEvent.change(screen.getByLabelText('Start date'), { target: { value: displayDate(WEDNESDAY) } });
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: displayDate(WEDNESDAY) } });
+    submitUpdate();
+
+    expect((await screen.findAllByText(/is on approved leave on this date/)).length).toBeGreaterThan(0);
+    expect(mockedUpdateSession).not.toHaveBeenCalled();
+  });
+
+  it('lets the instructor be scheduled on a day they are not on leave', async () => {
+    serveLeaveOnlyWhenAskedFor(WEDNESDAY);
+    wrap();
+    await fillRequiredFields();
+    submitCreate();
+
+    await waitFor(() => expect(mockedCreateSession).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/is on approved leave on this date/)).not.toBeInTheDocument();
   });
 });

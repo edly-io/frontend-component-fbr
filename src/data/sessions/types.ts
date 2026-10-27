@@ -31,6 +31,7 @@ export interface SessionListParams {
   program_key?: string;
   start_date?: string;
   end_date?: string;
+  page?: number;
 }
 
 export interface SessionApprovedLeavesParams {

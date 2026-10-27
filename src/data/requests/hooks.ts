@@ -5,7 +5,7 @@ import {
 } from './api';
 
 export const useApprovedLeaves = (params: ApprovedLeavesParams = {}, enabled = true) => useQuery({
-  queryKey: fbrKeys.approvedLeaves(params.program_key),
+  queryKey: fbrKeys.approvedLeaves(params.program_key, params.leave_date),
   queryFn: () => getApprovedLeaves(params),
   ...FBR_QUERY_OPTIONS,
   enabled,

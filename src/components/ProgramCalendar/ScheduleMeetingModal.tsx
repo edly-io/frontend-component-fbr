@@ -126,7 +126,7 @@ const ZoomHelpText = ({ session }: { session: ScheduleSession | null }) => (
 );
 
 const ScheduleMeetingModal = ({
-  isOpen, onClose, programKey = '', programInfo = null, onSuccess, session = null, holidays = [],
+  isOpen, onClose, programKey = '', programInfo = null, onSuccess, session = null,
   descriptionOnly = false,
 }: ScheduleMeetingModalProps) => {
   const isPastSession = isSessionPast(session);
@@ -166,12 +166,13 @@ const ScheduleMeetingModal = ({
   // scoped to the picked course; a lecture lists nobody until a course is picked.
   const {
     courseRunOptions, courseRunsLoading, instructorOptions, instructorsLoading, locationOptions,
-    locationsLoading, approvedLeaves, sessionTypeOptions, lectureDurations,
+    locationsLoading, approvedLeaves, leavesLoading, holidays, sessionTypeOptions, lectureDurations,
   } = useScheduleMeetingOptions({
     isOpen,
     programKey,
     descriptionOnly,
     isPastSession,
+    startDate: form.startDate,
     instructorsCourseId: isPastSession ? null : selectedCourseRunId,
     canListInstructors: isPastSession || Boolean(selectedCourseRunId) || !isSessionType,
   });
@@ -332,6 +333,8 @@ const ScheduleMeetingModal = ({
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    // The on-leave check is not known until the start date's leaves have loaded.
+    if (leavesLoading) { return; }
     setError('');
     setRejectedEmails([]);
     setConflictData(null);
@@ -392,7 +395,7 @@ const ScheduleMeetingModal = ({
           <Button variant="tertiary" onClick={handleClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={isSaving} className="ml-2">
+          <Button variant="primary" onClick={handleSubmit} disabled={isSaving || leavesLoading} className="ml-2">
             {isSaving ? (
               <>
                 <Spinner animation="border" size="sm" className="mr-2" />
