@@ -1,6 +1,6 @@
 {
   "name": "@edly-io/frontend-component-fbr",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "Shared React component library for Open edX authoring/FBR frontends",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
