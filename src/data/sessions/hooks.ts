@@ -1,8 +1,8 @@
 import {
-  keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient,
+  keepPreviousData, QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient,
 } from '@tanstack/react-query';
 import { fbrKeys, FBR_QUERY_OPTIONS } from '../queryDefaults';
-import { ApiRecord } from '../types';
+import { ApiRecord, PaginatedList } from '../types';
 import {
   cancelSession, correctSession, createSession, deleteSession, getCalendarSessions,
   getProgramDates, getSession, getSessionApprovedLeaves, getSessions, updateSession,
@@ -49,9 +49,21 @@ export const useProgramDates = (programKey: string) => useQuery({
   enabled: Boolean(programKey),
 });
 
-export const useSessions = (params: SessionListParams, enabled = true) => useQuery({
+const FIRST_PAGE = 1;
+
+const nextSessionsPage = <T>(lastPage: PaginatedList<T>, pages: PaginatedList<T>[], lastPageParam: number) => {
+  const loaded = pages.reduce((sum, page) => sum + page.results.length, 0);
+  // An empty page means the total went stale; stop rather than ask forever.
+  const hasMore = lastPage.results.length > 0 && loaded < lastPage.count;
+  return hasMore ? lastPageParam + 1 : undefined;
+};
+
+/** Sessions in a date range, a page at a time: `fetchNextPage` loads the next page. */
+export const useSessions = (params: SessionListParams, enabled = true) => useInfiniteQuery({
   queryKey: fbrKeys.sessionList(params),
-  queryFn: () => getSessions(params),
+  queryFn: ({ pageParam }) => getSessions({ ...params, page: pageParam }),
+  initialPageParam: FIRST_PAGE,
+  getNextPageParam: nextSessionsPage,
   ...FBR_QUERY_OPTIONS,
   enabled,
 });
