@@ -8,12 +8,13 @@
 .user-identity__hover-trigger {
   border-radius: 8px;
   display: inline-flex;
+  max-width: 100%;
   min-width: 0;
   outline: none;
 }
 
 .user-identity__hover-trigger:focus-visible {
-  box-shadow: 0 0 0 2px var(--pgn-color-primary-300, #8BB9FE);
+  box-shadow: 0 0 0 2px #1D4ED8;
 }
 
 .user-identity__avatar-wrap {
@@ -54,32 +55,32 @@
 }
 
 .user-identity__avatar-shell--super-admin {
-  background: #6366F1;
+  background: #4F46E5;
   border: 3px solid #111827;
 }
 
 .user-identity__avatar-shell--admin {
-  background: #0EA5E9;
+  background: #0369A1;
   border: 3px solid #6B7280;
 }
 
 .user-identity__avatar-shell--middle-admin {
-  background: #14B8A6;
+  background: #0F766E;
   border: 2px solid #6B7280;
 }
 
 .user-identity__avatar-shell--data-admin {
-  background: #A855F7;
+  background: #9333EA;
   border: 2px solid #9CA3AF;
 }
 
 .user-identity__avatar-shell--instructor {
-  background: #F43F5E;
+  background: #E11D48;
   border: 2px dashed #9CA3AF;
 }
 
 .user-identity__avatar-shell--trainee {
-  background: #84CC16;
+  background: #4D7C0F;
   border: 1px dashed #D1D5DB;
 }
 
@@ -89,7 +90,7 @@
 }
 
 .user-identity__avatar-shell--default {
-  background: #94A3B8;
+  background: #475569;
   border: 2px solid #D1D5DB;
 }
 
@@ -162,7 +163,8 @@
   color: var(--pgn-color-text-base);
   font-weight: 500;
   line-height: 1.2;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -208,19 +210,19 @@
 }
 
 .user-identity__role-label--admin {
-  color: #EA580C;
+  color: #C2410C;
 }
 
 .user-identity__corner-badge--admin {
-  background: #EA580C;
+  background: #C2410C;
 }
 
 .user-identity__role-label--middle-admin {
-  color: #D97706;
+  color: #B45309;
 }
 
 .user-identity__corner-badge--middle-admin {
-  background: #D97706;
+  background: #B45309;
 }
 
 .user-identity__role-label--data-admin {
@@ -232,15 +234,15 @@
 }
 
 .user-identity__role-label--instructor {
-  color: #16A34A;
+  color: #15803D;
 }
 
 .user-identity__corner-badge--instructor {
-  background: #16A34A;
+  background: #15803D;
 }
 
 .user-identity__role-label--trainee {
-  color: #6B7280;
+  color: #4B5563;
 }
 
 .user-identity__corner-badge--trainee {
@@ -252,7 +254,7 @@
 }
 
 .user-identity__corner-badge--pending-approval {
-  background: #D97706;
+  background: #B45309;
 }
 
 .user-identity__corner-badge--default,
