@@ -48,17 +48,19 @@ describe('UserIdentity', () => {
   });
 
   it('renders an <img> avatar when avatarValue looks like an image URL', () => {
-    render(<UserIdentity name="Jane Doe" avatarValue="https://example.com/avatar.png" />);
+    const { container } = render(<UserIdentity name="Jane Doe" avatarValue="https://example.com/avatar.png" />);
 
-    const avatarImg = screen.getByAltText('Jane Doe');
+    const avatarImg = container.querySelector('img.user-identity__avatar-media');
     expect(avatarImg).toHaveAttribute('src', 'https://example.com/avatar.png');
+    expect(avatarImg).toHaveAttribute('alt', '');
   });
 
   it('renders an <img> avatar when avatarValue looks like an absolute path', () => {
-    render(<UserIdentity name="Jane Doe" avatarValue="/media/avatar.png" />);
+    const { container } = render(<UserIdentity name="Jane Doe" avatarValue="/media/avatar.png" />);
 
-    const avatarImg = screen.getByAltText('Jane Doe');
+    const avatarImg = container.querySelector('img.user-identity__avatar-media');
     expect(avatarImg).toHaveAttribute('src', '/media/avatar.png');
+    expect(avatarImg).toHaveAttribute('alt', '');
   });
 
   it('treats a non-URL avatarValue as literal initials text', () => {
@@ -164,5 +166,20 @@ describe('UserIdentity', () => {
     render(<UserIdentity name="" />);
 
     expect(screen.getByText('?')).toBeInTheDocument();
+  });
+
+  it('hides decorative avatar text from assistive technology', () => {
+    const { container } = render(<UserIdentity name="Jane Doe" badges={['Instructor']} />);
+
+    expect(container.querySelector('.user-identity__avatar-initials')).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.user-identity__corner-badge')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('names the focusable hover trigger after the user and announces every role', () => {
+    render(<UserIdentity name="Jane Doe" badges={['Instructor', 'Trainee']} />);
+
+    const trigger = screen.getByRole('group', { name: 'Jane Doe' });
+    expect(trigger).toHaveAttribute('tabindex', '0');
+    expect(trigger).toHaveTextContent('Instructor, Trainee');
   });
 });

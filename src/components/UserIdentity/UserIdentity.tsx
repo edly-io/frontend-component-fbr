@@ -65,8 +65,10 @@ const UserIdentity = ({
   enableHoverCard = true,
 }: UserIdentityProps) => {
   const popoverId = React.useId();
+  const nameId = React.useId();
   const visibleBadges = badges.filter(Boolean);
   const primaryBadge = visibleBadges[0] || '';
+  const otherBadges = visibleBadges.slice(1);
   const avatarText = getAvatarText(avatarValue, name);
   const avatarTone = getBadgeTone(primaryBadge);
   const roleCode = primaryBadge ? getRoleCode(primaryBadge) : '';
@@ -76,17 +78,17 @@ const UserIdentity = ({
     <div className={`user-identity__avatar-wrap user-identity__avatar-wrap--${avatarSize}`}>
       <div className={`user-identity__avatar-shell user-identity__avatar-shell--${avatarSize} user-identity__avatar-shell--${avatarTone}`}>
         <Avatar
-          alt={name}
+          alt=""
           size="md"
           src={hasImage ? avatarText : undefined}
           className={`user-identity__avatar-media ${!hasImage ? 'user-identity__avatar-media--placeholder' : ''}`}
         />
         {!hasImage && (
-          <span className="user-identity__avatar-initials">{avatarText}</span>
+          <span className="user-identity__avatar-initials" aria-hidden="true">{avatarText}</span>
         )}
       </div>
       {primaryBadge && (
-        <span className={`user-identity__corner-badge user-identity__corner-badge--${avatarTone}`}>
+        <span className={`user-identity__corner-badge user-identity__corner-badge--${avatarTone}`} aria-hidden="true">
           {roleCode}
         </span>
       )}
@@ -98,10 +100,11 @@ const UserIdentity = ({
       {showAvatar && renderAvatar()}
 
       <div className="user-identity__content">
-        <div className="user-identity__name">{name}</div>
+        <div className="user-identity__name" id={nameId} title={enableHoverCard ? undefined : name}>{name}</div>
         {primaryBadge && (
           <div className={`user-identity__role-label user-identity__role-label--${avatarTone}`}>
             {primaryBadge}
+            {otherBadges.length > 0 && <span className="sr-only">{`, ${otherBadges.join(', ')}`}</span>}
           </div>
         )}
       </div>
@@ -116,6 +119,7 @@ const UserIdentity = ({
     <Popover
       id={`user-identity-hover-card-${popoverId}`}
       className="user-identity-hover-card"
+      aria-hidden="true"
     >
       <Popover.Content>
         <div className="user-identity-hover-card__body">
@@ -154,7 +158,7 @@ const UserIdentity = ({
         would have no way to see it at all.
       */}
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className="user-identity__hover-trigger" tabIndex={0}>
+      <div className="user-identity__hover-trigger" tabIndex={0} role="group" aria-labelledby={nameId}>
         {identity}
       </div>
     </OverlayTrigger>
