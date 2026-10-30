@@ -75,7 +75,7 @@
   &__date-label {
     flex: 0 0 2.25rem;
     font-size: .8rem;
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
     white-space: nowrap;
     margin-bottom: 0;
 
@@ -147,7 +147,7 @@
   }
 
   &__count {
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
     font-size: .8rem;
 
     @media (--pgn-size-breakpoint-min-width-sm) {
@@ -176,7 +176,7 @@
 
   &__record-id {
     font-size: .75rem;
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
     margin-top: 2px;
   }
 
@@ -191,14 +191,14 @@
 
 .audit-modal {
   &__subtitle {
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
     display: block;
     margin-top: .25rem;
     font-size: .85rem;
   }
 
   &__empty {
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
     margin: 0;
   }
 

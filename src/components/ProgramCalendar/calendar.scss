@@ -64,11 +64,11 @@ $month-gap: 4px;
     text-align: center;
 
     &--weekend {
-      color: var(--sessions-text-subtle, #ADB5BD);
+      color: var(--sessions-text-muted, #5C636A);
     }
 
     &--weekday {
-      color: var(--sessions-text-muted, #6C757D);
+      color: var(--sessions-text-muted, #5C636A);
     }
   }
 }
@@ -101,7 +101,11 @@ $month-gap: 4px;
   }
 
   &--outside {
-    opacity: .4;
+    background: var(--sessions-surface-subtle, #F8F9FA);
+
+    .calendar-day-number {
+      color: var(--sessions-text-muted, #5C636A);
+    }
   }
 }
 
@@ -320,7 +324,7 @@ $month-gap: 4px;
 
   &__note {
     font-size: 12px;
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
   }
 
   &__badges,
@@ -396,11 +400,11 @@ $month-gap: 4px;
     border-left: 1px solid var(--sessions-border, #DEE2E6);
 
     &--plain {
-      color: var(--sessions-text-muted, #6C757D);
+      color: var(--sessions-text-muted, #5C636A);
     }
 
     &--weekend {
-      color: var(--sessions-text-subtle, #ADB5BD);
+      color: var(--sessions-text-muted, #5C636A);
     }
 
     &--today {
@@ -480,7 +484,7 @@ $month-gap: 4px;
 .calendar-hour-label {
   right: 6px;
   font-size: 10px;
-  color: var(--sessions-text-faint, #9CA3AF);
+  color: var(--sessions-text-muted, #5C636A);
   line-height: 1;
 }
 
@@ -694,7 +698,7 @@ $month-gap: 4px;
   pointer-events: none;
   padding: 12px 0 6px;
   font-size: 11px;
-  color: var(--sessions-text-muted, #6C757D);
+  color: var(--sessions-text-muted, #5C636A);
   letter-spacing: .02em;
   background: linear-gradient(to bottom, transparent, var(--sessions-surface, #FFFFFF));
 }
