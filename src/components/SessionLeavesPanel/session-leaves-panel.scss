@@ -21,11 +21,11 @@
   // Paragon's `text-warning` is a pure yellow that fails on white, so the
   // original amber is kept here.
   &__leave-count--some {
-    color: var(--sessions-text-warning, #D97706);
+    color: var(--sessions-text-warning, #B45309);
   }
 
   &__leave-count--none {
-    color: var(--sessions-text-muted, #6C757D);
+    color: var(--sessions-text-muted, #5C636A);
   }
 }
 
@@ -36,6 +36,6 @@ label.fbr-session-leaves-panel__search-label {
   margin-bottom: .25rem;
   font-size: .8rem;
   line-height: 1.4;
-  color: var(--sessions-text-muted, #6C757D);
+  color: var(--sessions-text-muted, #5C636A);
   white-space: nowrap;
 }
