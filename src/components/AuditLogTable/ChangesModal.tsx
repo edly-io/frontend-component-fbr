@@ -5,6 +5,7 @@ import {
 import { getActionVariant } from './labels';
 import { formatAuditTimestamp } from './utils';
 import { AuditLogEntry } from './types';
+import useReturnFocus from './useReturnFocus';
 
 const EMPTY_VALUE = '—';
 
@@ -36,6 +37,7 @@ const ChangesSubtitle = ({ entry }: { entry: AuditLogEntry }) => (
 );
 
 const ChangesModal = ({ entry, onClose }: ChangesModalProps) => {
+  useReturnFocus();
   const changeRows = buildChangeRows(entry);
   const title = `Change Details — ${entry.object_repr}`;
 

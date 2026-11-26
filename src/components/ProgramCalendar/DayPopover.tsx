@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { OverlayTrigger, Popover } from '@openedx/paragon';
 import { ProgramDateEvent } from '../../data/sessions/types';
@@ -62,7 +62,37 @@ const DayPopover = ({
   const dateKey = toDateKey(date);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [atBottom, setAtBottom] = useState(false);
+  const isOpen = isDayOpen(dateKey);
+  const wasOpen = useRef(false);
   const close = () => setDayOpen(dateKey, false);
+  const popoverId = `day-popover-${dateKey}`;
+
+  // The popover renders at the end of <body>, out of the grid's tab order, so focus
+  // moves into it on open and back to its day cell when it closes.
+  useEffect(() => {
+    if (isOpen) {
+      const frame = requestAnimationFrame(() => {
+        document.getElementById(popoverId)?.querySelector<HTMLElement>('button, [href]')?.focus();
+      });
+      wasOpen.current = true;
+      return () => cancelAnimationFrame(frame);
+    }
+    if (wasOpen.current) {
+      wasOpen.current = false;
+      if (!document.activeElement || document.activeElement === document.body) {
+        document.querySelector<HTMLElement>(`[role="gridcell"][data-date="${dateKey}"]`)?.focus();
+      }
+    }
+    return undefined;
+  }, [isOpen, popoverId, dateKey]);
+
+  const handlePopoverKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape' && event.currentTarget.contains(event.target as Node)) {
+      event.stopPropagation();
+      close();
+      document.querySelector<HTMLElement>(`[role="gridcell"][data-date="${dateKey}"]`)?.focus();
+    }
+  };
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -76,7 +106,13 @@ const DayPopover = ({
   const showScrollHint = sessions.length >= SCROLL_HINT_MIN_SESSIONS && !atBottom;
 
   const popover = (
-    <Popover id={`day-popover-${dateKey}`} className="calendar-popover calendar-popover--day">
+    <Popover
+      id={popoverId}
+      className="calendar-popover calendar-popover--day"
+      role="dialog"
+      aria-label={dateLabel}
+      onKeyDown={handlePopoverKeyDown}
+    >
       <Popover.Title as="h5" className="calendar-popover__title calendar-popover__title--day m-0">
         {dateLabel}
         <span className="text-muted ml-1 calendar-popover__title-count">
@@ -96,7 +132,7 @@ const DayPopover = ({
 
   return (
     <OverlayTrigger
-      show={isDayOpen(dateKey)}
+      show={isOpen}
       onToggle={(next: boolean) => setDayOpen(dateKey, next)}
       trigger="click"
       placement="auto"

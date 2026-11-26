@@ -2,7 +2,10 @@ import React from 'react';
 import classNames from 'classnames';
 import { useCalendarGrid } from './CalendarGridContext';
 import { formatShortTime } from './calendarDates';
-import { chipBgClass, isCancelled, statusDotClass } from './sessionDisplay';
+import { SESSION_STATUS_LABELS } from '../../utils/constants';
+import {
+  chipBgClass, getDisplayStatus, isCancelled, statusDotClass,
+} from './sessionDisplay';
 import { getSessionPosition, getTitleLineCount, SessionLane } from './timeGridLayout';
 import SessionPopover from './SessionPopover';
 import { CalendarSession } from './types';
@@ -18,6 +21,7 @@ const NARROW_FROM_LANES = 2;
 interface TimeGridEventProps {
   session: CalendarSession;
   lane: SessionLane;
+  tabIndex: number;
 }
 
 /**
@@ -45,14 +49,24 @@ const titleClass = (height: number, ...extra: Array<string | false>) => classNam
 );
 
 /** A session block in the week/day grid; a session on approved leave is a non-interactive grey block. */
-const TimeGridEvent = ({ session, lane }: TimeGridEventProps) => {
+const TimeGridEvent = ({ session, lane, tabIndex }: TimeGridEventProps) => {
   const { studentRequestMap, sessionTypeColors } = useCalendarGrid();
   const { top, height } = getSessionPosition(session);
   const startTime = formatShortTime(new Date(session.scheduled_start_time as string));
+  const endTime = session.scheduled_end_time ? formatShortTime(new Date(session.scheduled_end_time)) : '';
+  const status = getDisplayStatus(session);
+  const eventLabel = [
+    endTime ? `${startTime} to ${endTime}` : startTime,
+    session.title,
+    session.course_name,
+    status && (SESSION_STATUS_LABELS[status] || status),
+  ].filter(Boolean).join(', ');
 
   if (studentRequestMap?.get(session.id as number)) {
     return (
       <div
+        role="note"
+        aria-label={`${eventLabel}, on leave`}
         title={`${session.title} — On Leave`}
         className={blockClass(lane, 'calendar-event--onleave user-select-none')}
         style={blockPosition(top, height, lane)}
@@ -72,6 +86,8 @@ const TimeGridEvent = ({ session, lane }: TimeGridEventProps) => {
     <SessionPopover session={session}>
       <button
         type="button"
+        tabIndex={tabIndex}
+        aria-label={eventLabel}
         title={`${session.title} — ${startTime}`}
         className={blockClass(lane, 'calendar-event--session border-0', chipBgClass(session, sessionTypeColors))}
         style={blockPosition(top, height, lane)}

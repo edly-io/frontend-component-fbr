@@ -148,6 +148,11 @@ const SearchableSelect = (props: SearchableSelectProps) => {
     'aria-expanded': isOpen,
     'aria-autocomplete': 'list' as const,
     'aria-controls': `${id}-listbox`,
+    'aria-activedescendant': isOpen && !loading && filteredOptions[focusedIndex]
+      ? `${id}-option-${focusedIndex}`
+      : undefined,
+    'aria-required': required || undefined,
+    'aria-invalid': isInvalid || undefined,
   };
 
   const renderMultiInput = () => (
@@ -174,7 +179,7 @@ const SearchableSelect = (props: SearchableSelectProps) => {
           <Chip
             key={opt.value}
             iconAfter={Close}
-            iconAfterAlt="Remove"
+            iconAfterAlt={`Remove ${opt.label}`}
             onIconAfterClick={(e: React.SyntheticEvent) => {
               e.stopPropagation();
               removeSelected(opt);
@@ -209,6 +214,7 @@ const SearchableSelect = (props: SearchableSelectProps) => {
         return (
           <div
             key={option.value}
+            id={`${id}-option-${index}`}
             role="option"
             tabIndex={-1}
             aria-selected={isSelected}
@@ -230,8 +236,8 @@ const SearchableSelect = (props: SearchableSelectProps) => {
   );
 
   return (
-    <Form.Group className="mb-3">
-      <Form.Label htmlFor={id}>
+    <Form.Group className="mb-3" controlId={id}>
+      <Form.Label>
         {label}{required && ' *'}
       </Form.Label>
       <div ref={containerRef} className="fbr-searchable-select">

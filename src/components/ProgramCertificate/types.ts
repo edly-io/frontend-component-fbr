@@ -10,6 +10,8 @@ export interface CertificateHtmlViewProps {
    * (the modal), so the whole certificate is visible with no scrolling.
    */
   mode?: CertificateFitMode;
+  /** Heading level the certificate's top heading is exposed at. Defaults to 2. */
+  headingLevel?: number;
 }
 
 export interface PrintCertificateButtonProps {

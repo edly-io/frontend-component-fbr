@@ -55,8 +55,8 @@ const CalendarPdfDownloadButton = ({
   };
 
   const label = hasSessions
-    ? `Download the ${rangeLabel} timetable as a PDF`
-    : 'No sessions in this period to download';
+    ? `Download PDF of the ${rangeLabel} timetable`
+    : 'Download PDF (no sessions in this period)';
 
   return (
     <>

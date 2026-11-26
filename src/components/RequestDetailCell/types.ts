@@ -12,6 +12,9 @@ export interface LeaveOrRemoteRequest {
   leave_end_date?: string;
   category?: string;
   sessions?: RequestSession[];
+  submitter_name?: string;
+  submitter_email?: string;
+  created?: string;
 }
 
 export interface RequestDetailCellProps {

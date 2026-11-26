@@ -10,6 +10,7 @@ import {
   countChangedFields, formatAuditTimestamp, PAGE_SIZE, toAuditLogEntries,
 } from './utils';
 import { AuditLogEntry } from './types';
+import useReturnFocus from './useReturnFocus';
 
 const HISTORY_ERROR_FALLBACK = 'Failed to load history.';
 
@@ -56,6 +57,7 @@ interface RecordHistoryModalProps {
 const RecordHistoryModal = ({
   appLabel, recordType, objectId, objectRepr, onClose,
 }: RecordHistoryModalProps) => {
+  useReturnFocus();
   const [page, setPage] = useState(1);
   const [changesEntry, setChangesEntry] = useState<AuditLogEntry | null>(null);
 
