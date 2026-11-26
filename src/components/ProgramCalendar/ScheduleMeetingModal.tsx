@@ -469,6 +469,7 @@ const ScheduleMeetingModal = ({
                 <Form.Control
                   as="select"
                   value={form.sessionType}
+                  aria-required="true"
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateForm({ sessionType: e.target.value })}
                   disabled={!!session || isPastSession || descriptionOnly}
                   className={classNames({ 'fbr-schedule-meeting__type-select--locked': session })}

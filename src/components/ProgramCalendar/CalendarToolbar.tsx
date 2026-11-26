@@ -30,13 +30,19 @@ const CalendarToolbar = ({
       <Button variant="outline-primary" size="sm" onClick={onGoToToday}>Today</Button>
       <IconButton src={ChevronRight} iconAs={ChevronRight} alt="Next" onClick={() => onNavigate(1)} size="sm" />
 
-      <span className="calendar-toolbar__label">{rangeLabel}</span>
+      <span className="calendar-toolbar__label" aria-live="polite">{rangeLabel}</span>
 
       {/* View toggles + export + New session — pushed to the right */}
       <div className="ml-auto d-flex align-items-center calendar-toolbar__actions">
-        <div className="d-flex align-items-center calendar-toolbar__group">
+        <div className="d-flex align-items-center calendar-toolbar__group" role="group" aria-label="Calendar view">
           {Object.values(CALENDAR_VIEWS).map((v) => (
-            <Button key={v} variant={view === v ? 'primary' : 'outline-primary'} size="sm" onClick={() => onViewChange(v)}>
+            <Button
+              key={v}
+              variant={view === v ? 'primary' : 'outline-primary'}
+              size="sm"
+              aria-pressed={view === v}
+              onClick={() => onViewChange(v)}
+            >
               {capitalize(v)}
             </Button>
           ))}

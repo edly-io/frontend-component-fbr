@@ -3,6 +3,7 @@ import classNames from 'classnames';
 import { Button, Spinner, StandardModal } from '@openedx/paragon';
 import { REQUEST_TYPE } from '../../utils/constants';
 import { useSessions } from '../../data/sessions/hooks';
+import { formatDateTime } from '../../utils/dates';
 import {
   LeaveOrRemoteRequest, RequestDetailCellProps, RequestSession, RequestSummaryProps,
 } from './types';
@@ -204,6 +205,11 @@ export const RequestSummary = ({ req, programKey = '' }: RequestSummaryProps) =>
   );
 };
 
+const getDetailsLabel = (req: LeaveOrRemoteRequest): string | undefined => {
+  const parts = [req.submitter_name || req.submitter_email, req.created && formatDateTime(req.created)].filter(Boolean);
+  return parts.length ? `Details for ${parts.join(', ')}` : undefined;
+};
+
 const RequestDetailCell = ({ req, programKey = '' }: RequestDetailCellProps) => {
   const [expanded, setExpanded] = useState(false);
   const isLeave = isLeaveRequest(req);
@@ -218,6 +224,7 @@ const RequestDetailCell = ({ req, programKey = '' }: RequestDetailCellProps) => 
         size="sm"
         className="d-block p-0 text-left"
         onClick={() => setExpanded(true)}
+        aria-label={getDetailsLabel(req)}
       >
         Details
       </Button>

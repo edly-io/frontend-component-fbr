@@ -49,6 +49,8 @@ const ViewLeavesButton = ({ session, onSelect }: { session: SessionApprovedLeave
     variant="outline-primary"
     onClick={() => onSelect(session)}
     disabled={countLeaves(session) === 0}
+    aria-label={`View approved leaves for ${session.title}${
+      session.scheduled_start_time ? `, ${formatDateTime(session.scheduled_start_time)}` : ''}`}
   >
     View approved leaves
   </Button>

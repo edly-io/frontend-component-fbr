@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import classNames from 'classnames';
 import { bucketSessionsByDay } from '../../utils/dates';
 import { CalendarGridContext, CalendarGridContextValue, PopoverId } from './CalendarGridContext';
-import { CALENDAR_VIEWS, getWeekDays } from './calendarDates';
+import { CALENDAR_VIEWS, formatRangeLabel, getWeekDays } from './calendarDates';
 import { buildHolidayMap, buildProgramDatesMap } from './calendarMaps';
 import CalendarToolbar from './CalendarToolbar';
 import MonthGrid from './MonthGrid';
@@ -82,6 +82,7 @@ const CalendarView = ({
     closeAll();
     action(...args);
   };
+  const rangeLabel = formatRangeLabel(view, currentDate);
 
   const gridContext: CalendarGridContextValue = useMemo(() => ({
     role,
@@ -114,6 +115,8 @@ const CalendarView = ({
           {view === CALENDAR_VIEWS.MONTH ? (
             <MonthGrid
               currentDate={currentDate}
+              label={rangeLabel}
+              onNavigate={closingFirst(onNavigate)}
               sessionMap={sessionMap}
               holidayMap={holidayMap}
               gradedDatesMap={programDatesMap}
@@ -121,6 +124,8 @@ const CalendarView = ({
           ) : (
             <TimeGrid
               days={view === CALENDAR_VIEWS.WEEK ? getWeekDays(currentDate) : [currentDate]}
+              label={rangeLabel}
+              onNavigate={closingFirst(onNavigate)}
               sessionMap={sessionMap}
               holidayMap={holidayMap}
               programDatesMap={programDatesMap}

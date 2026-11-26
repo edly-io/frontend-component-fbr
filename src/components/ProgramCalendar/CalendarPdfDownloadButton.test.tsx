@@ -65,13 +65,13 @@ describe('CalendarPdfDownloadButton', () => {
 
   it('renders an accessible download control', () => {
     renderButton();
-    const button = screen.getByRole('button', { name: /download the mar 1 – mar 7, 2026 timetable as a pdf/i });
+    const button = screen.getByRole('button', { name: /download pdf of the mar 1 – mar 7, 2026 timetable/i });
     expect(button).toBeEnabled();
   });
 
   it('is disabled with an explanatory name when the range has no sessions', () => {
     renderButton({ sessions: [] });
-    const button = screen.getByRole('button', { name: /no sessions in this period to download/i });
+    const button = screen.getByRole('button', { name: /download pdf \(no sessions in this period\)/i });
     expect(button).toBeDisabled();
   });
 

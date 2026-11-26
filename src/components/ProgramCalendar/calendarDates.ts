@@ -22,7 +22,7 @@ const startOfDay = (date: Date): Date => {
   return d;
 };
 
-const addDays = (date: Date, days: number): Date => {
+export const addDays = (date: Date, days: number): Date => {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
@@ -91,16 +91,19 @@ export const computeFetchWindow = (view: CalendarViewMode, currentDate: Date): {
 };
 
 /** The date `direction` periods (months, weeks or days) away from `date`. */
+/** Same day of the month `months` away, clamped to that month's last day (31 Jan + 1 → 28/29 Feb). */
+export const addMonthsClamped = (date: Date, months: number): Date => {
+  const firstOfTarget = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const lastDay = new Date(firstOfTarget.getFullYear(), firstOfTarget.getMonth() + 1, 0).getDate();
+  firstOfTarget.setDate(Math.min(date.getDate(), lastDay));
+  return firstOfTarget;
+};
+
 export const shiftDate = (view: CalendarViewMode, date: Date, direction: number): Date => {
-  const d = new Date(date);
   if (view === CALENDAR_VIEWS.MONTH) {
-    d.setMonth(d.getMonth() + direction);
-  } else if (view === CALENDAR_VIEWS.WEEK) {
-    d.setDate(d.getDate() + direction * DAYS_IN_WEEK);
-  } else {
-    d.setDate(d.getDate() + direction);
+    return addMonthsClamped(date, direction);
   }
-  return d;
+  return addDays(date, view === CALENDAR_VIEWS.WEEK ? direction * DAYS_IN_WEEK : direction);
 };
 
 export const getToday = (): Date => startOfDay(new Date());

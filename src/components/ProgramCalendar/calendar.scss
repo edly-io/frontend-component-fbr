@@ -37,15 +37,18 @@ $month-gap: 4px;
     border-bottom: 2px solid var(--sessions-border, #DEE2E6);
   }
 
-  // Grid, not flex: a wrapped flex line stretches every cell in it to match
-  // the tallest cell in that same week, so a week with a busy day looks
-  // taller (and its gap to the next week smaller) than a quiet week. Fixed
-  // row tracks keep every week — and every cell within it — the same height
-  // regardless of how much a given day is carrying.
+  // Weeks stack in a column; each week is its own seven-track grid with a
+  // fixed 110px row, so every week — and every cell within it — keeps the same
+  // height regardless of how much a given day is carrying.
   &__grid {
+    flex-direction: column;
+  }
+
+  &__week {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-auto-rows: 110px;
+    grid-template-rows: 110px;
+    gap: $month-gap;
   }
 
   // `min-width: 0` is what keeps a long event chip from widening its own
@@ -98,6 +101,11 @@ $month-gap: 4px;
 
   &--clickable {
     cursor: pointer;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pgn-color-primary-base, #0D6EFD);
+    outline-offset: 1px;
   }
 
   &--outside {
@@ -428,6 +436,12 @@ $month-gap: 4px;
   &__col {
     flex: 1;
     border-left: 1px solid var(--sessions-border, #DEE2E6);
+
+    // Inset: the scrolling body clips anything drawn outside the column.
+    &:focus-visible {
+      outline: 2px solid var(--pgn-color-primary-base, #0D6EFD);
+      outline-offset: -2px;
+    }
 
     &--plain {
       background: var(--sessions-surface, #FFFFFF);

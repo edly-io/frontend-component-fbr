@@ -54,6 +54,28 @@ const useFitScale = (mode: CertificateFitMode, html: string) => {
 };
 
 /**
+ * The template's headings start at level 1, but the certificate always sits under the
+ * host page's own heading. Re-level them for assistive technology (no visual change)
+ * and hide the purely decorative line graphics.
+ */
+const useAccessibleCertificate = (ref: React.RefObject<HTMLDivElement>, html: string, headingLevel: number) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return;
+    }
+    el.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6').forEach((heading) => {
+      const level = Number(heading.tagName.substring(1)) + headingLevel - 1;
+      heading.setAttribute('aria-level', String(Math.min(level, 6)));
+    });
+    el.querySelectorAll('svg:not([role="img"]):not([aria-label]):not([aria-labelledby])').forEach((svg) => {
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('focusable', 'false');
+    });
+  }, [ref, html, headingLevel]);
+};
+
+/**
  * Thin host for a backend-rendered certificate: injects the final HTML string
  * and scales it to fit. The FBR design lives entirely in the backend template
  * (and its inlined `<style>`), so this component carries no certificate styling
@@ -65,8 +87,9 @@ const useFitScale = (mode: CertificateFitMode, html: string) => {
  * Hardening the residual super-admin-template vector with a sandboxed iframe is
  * deferred — see TECH_DEBT.md [TD-007].
  */
-const CertificateHtmlView: React.FC<CertificateHtmlViewProps> = ({ html, mode = 'fill' }) => {
+const CertificateHtmlView: React.FC<CertificateHtmlViewProps> = ({ html, mode = 'fill', headingLevel = 2 }) => {
   const scaleRef = useFitScale(mode, html);
+  useAccessibleCertificate(scaleRef, html, headingLevel);
   return (
     <div
       className="fbr-cert-scale"

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Alert, Button, ButtonGroup, Container, Spinner, Toast,
@@ -93,6 +93,12 @@ const TabToggle = ({ activeTab, onChange }: TabToggleProps) => (
 const ProgramCalendarPage = ({ programKey }: { programKey: string }) => {
   const nav = useCalendarNavigation();
   const data = useProgramCalendarData(programKey, nav.start, nav.end);
+  // After the first load the calendar stays mounted while it refetches, so the
+  // toolbar keeps focus when the view or date changes.
+  const [hasLoaded, setHasLoaded] = useState(false);
+  useEffect(() => {
+    if (!data.loading) { setHasLoaded(true); }
+  }, [data.loading]);
   const { role } = data;
   const tab = useCalendarTab();
   const toast = useSuccessToast();
@@ -150,7 +156,7 @@ const ProgramCalendarPage = ({ programKey }: { programKey: string }) => {
   const renderContent = () => {
     // Initial load — full-page spinner. Later navigations dim the grid inside
     // CalendarView instead, so it stays visible.
-    if (data.loading && data.sessions.length === 0 && !data.error) {
+    if (!hasLoaded && data.loading && data.sessions.length === 0 && !data.error) {
       return (
         <Container className="py-5 text-center">
           <Spinner animation="border" />

@@ -18,6 +18,8 @@ interface DayCellProps {
   holidays: CalendarHoliday[];
   gradedDates: ProgramDateEvent[];
   isOutsideMonth: boolean;
+  /** The grid's one tab stop. */
+  isActive: boolean;
 }
 
 const stopKeys = (e: React.KeyboardEvent) => e.stopPropagation();
@@ -38,6 +40,7 @@ const GradedChips = ({ gradedDates }: { gradedDates: ProgramDateEvent[] }) => {
             type="button"
             onClick={(e) => { e.stopPropagation(); closeDayPopover(); }}
             onKeyDown={stopKeys}
+            tabIndex={-1}
             title={`Due: ${event.title} (${event.courseName})`}
             className="calendar-chip calendar-chip--graded text-truncate d-block text-left w-100"
           >
@@ -71,6 +74,7 @@ const SessionChip = ({ session }: { session: CalendarSession }) => {
         type="button"
         onClick={(e) => { e.stopPropagation(); closeDayPopover(); }}
         onKeyDown={stopKeys}
+        tabIndex={-1}
         title={session.title}
         className={classNames(
           'calendar-chip calendar-chip--session text-truncate d-block border-0 w-100',
@@ -90,14 +94,32 @@ const SessionChip = ({ session }: { session: CalendarSession }) => {
   );
 };
 
-const cellAriaLabel = (date: Date, sessionCount: number): string => (
-  `${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}, `
-  + `${sessionCount} session${sessionCount !== 1 ? 's' : ''}`
-);
+const plural = (count: number, word: string): string => `${count} ${word}${count !== 1 ? 's' : ''}`;
+
+interface CellLabelParts {
+  date: Date;
+  isToday: boolean;
+  sessionCount: number;
+  dueCount: number;
+  holidays: CalendarHoliday[];
+  isOnLeave: boolean;
+}
+
+/** Everything the cell shows, in one name: "Tuesday, November 12, today, 2 sessions, 1 due date, …". */
+const cellAriaLabel = ({
+  date, isToday, sessionCount, dueCount, holidays, isOnLeave,
+}: CellLabelParts): string => [
+  date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+  isToday && 'today',
+  plural(sessionCount, 'session'),
+  dueCount > 0 && plural(dueCount, 'due date'),
+  holidays.length > 0 && `holiday: ${holidays.map((h) => h.name).join(', ')}`,
+  isOnLeave && 'on leave',
+].filter(Boolean).join(', ');
 
 /** One day of the month grid: holidays, leave banner, due dates and up to two session chips. */
 const DayCell = ({
-  date, sessions, holidays, gradedDates, isOutsideMonth,
+  date, sessions, holidays, gradedDates, isOutsideMonth, isActive,
 }: DayCellProps) => {
   const {
     role, leaveDateMap, isDayOpen, setDayOpen,
@@ -106,30 +128,40 @@ const DayCell = ({
   const isToday = dateKey === toDateKey(new Date());
   const overflow = sessions.length - MAX_CHIPS;
   const hasSessions = sessions.length > 0 || gradedDates.length > 0;
+  const isOnLeave = Boolean((role.isLearner || role.isInstructor) && leaveDateMap?.get(dateKey));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.target !== e.currentTarget) { return; }
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       setDayOpen(dateKey, !isDayOpen(dateKey));
     }
   };
 
-  // The cell is interactive (Enter/Space toggles the day popover) but contains
-  // its own button children (session chips, "+N more"), so it can't be a real
-  // <button> — nested buttons are invalid HTML. role + tabIndex + onKeyDown
-  // give the same affordances on a div.
-  /* eslint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex */
+  // A grid cell: one roving tab stop for the whole grid. Enter/Space opens the
+  // day popover, which lists every session and due date as a button, so the
+  // chips inside stay out of the tab order.
   const cellContent = (
     <div
-      role={hasSessions ? 'button' : undefined}
-      tabIndex={hasSessions ? 0 : undefined}
+      role="gridcell"
+      tabIndex={isActive ? 0 : -1}
+      data-date={dateKey}
+      aria-current={isToday ? 'date' : undefined}
+      aria-expanded={hasSessions ? isDayOpen(dateKey) : undefined}
       onKeyDown={hasSessions ? handleKeyDown : undefined}
       className={classNames(
         'calendar-day-cell fbr-calendar-day-cell d-flex flex-column align-items-stretch text-left w-100',
         `calendar-day-cell--${dayVariant(isToday, isWeekendDay(date))}`,
         { 'calendar-day-cell--clickable': hasSessions, 'calendar-day-cell--outside': isOutsideMonth },
       )}
-      aria-label={cellAriaLabel(date, sessions.length)}
+      aria-label={cellAriaLabel({
+        date,
+        isToday,
+        sessionCount: sessions.length,
+        dueCount: gradedDates.length,
+        holidays,
+        isOnLeave,
+      })}
     >
       <span
         className={classNames(
@@ -142,7 +174,7 @@ const DayCell = ({
       {holidays.map((h) => (
         <div key={h.id} className="calendar-chip calendar-chip--holiday text-truncate">{h.name}</div>
       ))}
-      {(role.isLearner || role.isInstructor) && leaveDateMap?.get(dateKey) && (
+      {isOnLeave && (
         <div className="calendar-chip calendar-chip--leave text-truncate">On Leave</div>
       )}
       <GradedChips gradedDates={gradedDates} />
@@ -151,6 +183,7 @@ const DayCell = ({
         <Button
           variant="link"
           onClick={(e: React.MouseEvent) => { e.stopPropagation(); setDayOpen(dateKey, true); }}
+          tabIndex={-1}
           className="calendar-link-button calendar-link-button--chip border-0 p-0 text-left"
         >
           +{overflow} more
@@ -158,7 +191,6 @@ const DayCell = ({
       )}
     </div>
   );
-  /* eslint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 
   if (!hasSessions) { return cellContent; }
 
